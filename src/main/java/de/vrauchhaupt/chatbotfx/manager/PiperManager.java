@@ -85,7 +85,7 @@ public class PiperManager extends AbstractManager {
     private void generateTTS(ControlledThread thread) {
         Path piperExe = getPiperExe();
         if (piperExe == null)
-            throw new RuntimeException("Please review your settings. Piper is not accessible by file.");
+            return;
         List<String> command = List.of(piperExe.toAbsolutePath().toString(),
                 "--model", "en_GB-cori-high.onnx",
                 "--config", "en_GB-cori-high.onnx.json",
