@@ -1,6 +1,5 @@
 package de.vrauchhaupt.chatbot.view;
 
-import de.vonrauchhaupt.chatbot.manager.*;
 import de.vrauchhaupt.chatbot.manager.*;
 import de.vrauchhaupt.chatbot.model.ChatViewModel;
 import de.vrauchhaupt.chatbot.model.DisplayRole;
