@@ -98,8 +98,13 @@ public class StableDiffusionManager extends AbstractManager {
 
             String payloadString = payload.toString();
 
+            String webuiForgeHost = SettingsManager.instance().getWebuiForgeHost();
+            if ( !webuiForgeHost.endsWith("/"))
+                webuiForgeHost = webuiForgeHost + "/";
+            webuiForgeHost = webuiForgeHost + "sdapi/v1/txt2img";
+            URI restUrl = URI.create(webuiForgeHost);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(SettingsManager.instance().getWebuiForgeHost()))
+                    .uri(restUrl)
                     .header("Content-Type", "application/json; utf-8")
                     .POST(HttpRequest.BodyPublishers.ofString(payloadString, StandardCharsets.UTF_8))
                     .build();
@@ -128,7 +133,7 @@ public class StableDiffusionManager extends AbstractManager {
                     imageConsumer.addImage(index, imageBytes, imageFile);
                 }
             } else {
-                throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + response.body());
+                throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + response.body() + " - URL was ");
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate image.", e);

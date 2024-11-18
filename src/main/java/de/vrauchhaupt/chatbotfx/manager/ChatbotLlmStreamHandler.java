@@ -15,10 +15,9 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler {
     private String lastSentences = "";
 
     private static void appendAnswer(String curSentence) {
-
         if (curSentence == null || curSentence.trim().equals(""))
             return;
-        System.out.println("Original sentence '" + curSentence +"'");
+        System.out.println("Original sentence '" + curSentence + "'");
         curSentence = cleanWith(curSentence, true).trim();
         TtsSentence ttsSentence = new TtsSentence(curSentence);
         PrintingManager.instance().addToPrintingQueue(ttsSentence);
@@ -39,9 +38,14 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler {
     public void accept(String message) {
         //System.out.println("New Incoming Message '" + message + "'");
         String trimmedMessage = message.trim();
-
-        String matchedEnding = sentenceEndings.stream().filter(x -> trimmedMessage.endsWith(x)).findFirst().orElse(null);
-        if (matchedEnding != null & !trimmedMessage.endsWith("...") && !"*".equals(trimmedMessage)) {
+        String matchedEnding = sentenceEndings.stream()
+                .filter(trimmedMessage::endsWith)
+                .findFirst()
+                .orElse(null);
+        if (matchedEnding != null &
+                !trimmedMessage.endsWith("...") &&
+                !"*".equals(trimmedMessage) &&
+                message.length() - lastSentences.length() > 1) {
             //System.out.println("New line because of sentence ending '" + matchedEnding + "'");
             String curSentence = message.substring(lastSentences.length());
             appendAnswer(curSentence);
