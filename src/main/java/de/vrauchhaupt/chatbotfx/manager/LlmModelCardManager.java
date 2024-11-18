@@ -234,4 +234,12 @@ public class LlmModelCardManager extends AbstractManager {
         availableModelCards = null;
         return getAvailableModelCards();
     }
+
+    public boolean checkIfModelCardsExist() {
+        return !availableModelCards.isEmpty();
+    }
+
+    public boolean checkIfLlmModelFilesExist() {
+        return !availableLlmModelFiles.isEmpty();
+    }
 }

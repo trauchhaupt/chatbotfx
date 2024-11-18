@@ -11,11 +11,11 @@ module chatbotfx {
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
 
-    exports de.vrauchhaupt.chatbot to javafx.controls,javafx.graphics, javafx.fxml;
-    exports de.vrauchhaupt.chatbot.view to javafx.controls,javafx.graphics, javafx.fxml;
-    exports de.vrauchhaupt.chatbot.manager to javafx.controls, javafx.fxml, javafx.graphics;
-    exports de.vrauchhaupt.chatbot.model to com.fasterxml.jackson.databind;
+    exports de.vrauchhaupt.chatbotfx to javafx.controls,javafx.graphics, javafx.fxml;
+    exports de.vrauchhaupt.chatbotfx.view to javafx.controls,javafx.graphics, javafx.fxml;
+    exports de.vrauchhaupt.chatbotfx.manager to javafx.controls, javafx.fxml, javafx.graphics;
+    exports de.vrauchhaupt.chatbotfx.model to com.fasterxml.jackson.databind;
 
-    opens de.vrauchhaupt.chatbot.view;
-    opens de.vrauchhaupt.chatbot.manager;
+    opens de.vrauchhaupt.chatbotfx.view;
+    opens de.vrauchhaupt.chatbotfx.manager;
 }

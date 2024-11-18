@@ -6,6 +6,7 @@ public class SettingsJson extends AbstractJson {
     private String pathToLlmModelFiles;
     private String pathToTtsModelFiles;
     private String selectedLlmModelCard;
+    private String ollamaHost;
 
     public String getPathToPiper() {
         return pathToPiper;
@@ -49,6 +50,15 @@ public class SettingsJson extends AbstractJson {
 
     public SettingsJson setSelectedLlmModelCard(String selectedLlmModelCard) {
         this.selectedLlmModelCard = selectedLlmModelCard;
+        return this;
+    }
+
+    public String getOllamaHost() {
+        return ollamaHost;
+    }
+
+    public SettingsJson setOllamaHost(String ollamaHost) {
+        this.ollamaHost = ollamaHost;
         return this;
     }
 }

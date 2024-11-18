@@ -25,3 +25,6 @@ replay_pid*
 /.gitattributes
 /.idea/
 /build/
+/chatbot_config.json
+/llm_models/
+/model_cards/

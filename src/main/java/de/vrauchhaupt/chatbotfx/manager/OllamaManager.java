@@ -3,13 +3,13 @@ package de.vrauchhaupt.chatbotfx.manager;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import io.github.ollama4j.OllamaAPI;
 import io.github.ollama4j.models.chat.*;
-import io.github.ollama4j.models.response.LibraryModel;
 import io.github.ollama4j.models.response.Model;
 import io.github.ollama4j.utils.Options;
 import io.github.ollama4j.utils.OptionsBuilder;
 import jakarta.validation.constraints.NotNull;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,27 +18,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class OllamaManager {
+public class OllamaManager extends AbstractManager {
 
     private static final long REQUEST_TIMEOUT_SECONDS = 360L;
     private static final boolean VERBOSE = false;
-    private static final String OLLAMA_HOST = "http://localhost:11434/";
     private static OllamaManager INSTANCE;
-    private final OllamaAPI ollamaAPI;
-    private final Options options;
-
+    private final BooleanProperty working = new SimpleBooleanProperty(false);
 
     private OllamaManager() {
-        this.ollamaAPI = new OllamaAPI(OLLAMA_HOST);
-        ollamaAPI.setVerbose(VERBOSE);
-        ollamaAPI.setRequestTimeoutSeconds(REQUEST_TIMEOUT_SECONDS);
-        checkOllamaServerRunning();
-        options = new OptionsBuilder()
-                .setTemperature(1.1f)
-                .setTopP(0.7f)
-                .setTopK(50)
-                .setRepeatPenalty(1.3f)
-                .build();
+
     }
 
     public static OllamaManager instance() {
@@ -47,46 +35,33 @@ public class OllamaManager {
         return INSTANCE;
     }
 
-    public final void checkOllamaServerRunning() {
-        try {
-            List<ProcessHandle> processes = ProcessHandle.allProcesses().toList();
-            for (ProcessHandle processHandle : processes) {
-                if (!processHandle.isAlive())
-                    continue;
-                String commandLine = processHandle.info().command().orElse("");
-                if (commandLine.contains("ollama.exe")) {
-                    System.out.println("Found already running " + commandLine + " with process-id " + processHandle.pid());
-                    return;
-                }
-            }
-
-        } catch (Exception e) {
-            throw new RuntimeException("Cannot check if ollama is already running", e);
-        }
-        throw new RuntimeException("The ollama server is not running. Start it by calling 'ollama.exe serve'");
+    private OllamaAPI newOllamaApi() {
+        OllamaAPI ollamaAPI = new OllamaAPI(SettingsManager.instance().getOllamaHost());
+        ollamaAPI.setVerbose(VERBOSE);
+        ollamaAPI.setRequestTimeoutSeconds(REQUEST_TIMEOUT_SECONDS);
+        return ollamaAPI;
     }
 
-    public List<LibraryModel> listLibraryModels() {
-        List<LibraryModel> libraryModels = null;
+    public final boolean checkOllamaServerRunning() {
         try {
-            libraryModels = ollamaAPI.listModelsFromLibrary();
+            listModels();
+            return true;
         } catch (Exception e) {
-            throw new RuntimeException("Could not list library models from ollama server", e);
+            e.printStackTrace();
+            return false;
         }
-        if (libraryModels == null)
-            libraryModels = new ArrayList<>();
-        else
-            libraryModels = new ArrayList<>(libraryModels);
-        return libraryModels;
     }
 
     @NotNull
     public List<Model> listModels() {
         List<Model> models;
         try {
-            models = ollamaAPI.listModels();
+            working.set(true);
+            models = newOllamaApi().listModels();
         } catch (Exception e) {
             throw new RuntimeException("Could not list models from ollama server", e);
+        } finally {
+            working.set(false);
         }
         if (models == null)
             models = new ArrayList<>();
@@ -97,6 +72,14 @@ public class OllamaManager {
 
     public List<OllamaChatMessage> systemNoticeAndAsk(String systemNotice, String message,
                                                       List<OllamaChatMessage> messages, String model, ChatbotLlmStreamHandler streamHandler) {
+
+        Options options = new OptionsBuilder()
+                .setTemperature(1.1f)
+                .setTopP(0.7f)
+                .setTopK(50)
+                .setRepeatPenalty(1.3f)
+                .build();
+
         OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model);
         OllamaChatRequestBuilder ollamaChatRequestBuilder = builder.withMessages(messages)
                 .withOptions(options);
@@ -111,35 +94,21 @@ public class OllamaManager {
                         .withMessage(OllamaChatMessageRole.SYSTEM, systemNotice);
             }
         }
-        if (message != null && !message.trim().isEmpty())
+        if (message != null && !message.trim().isEmpty()) {
             ollamaChatRequestBuilder = ollamaChatRequestBuilder
                     .withMessage(OllamaChatMessageRole.USER, message);
+        }
         OllamaChatRequest ollamaChatRequestModel = ollamaChatRequestBuilder.build();
         try {
-            OllamaChatResult chat = ollamaAPI.chat(ollamaChatRequestModel, streamHandler);
+            working.set(true);
+            OllamaChatResult chat = newOllamaApi().chat(ollamaChatRequestModel, streamHandler);
             chat.getResponse();
             streamHandler.inputHasStopped();
             return chat.getChatHistory();
         } catch (Exception e) {
             throw new RuntimeException("Could not ask '" + message + "' on model '" + model + "'", e);
-        }
-    }
-
-    public List<OllamaChatMessage> askWithImages(
-            String message, List<OllamaChatMessage> messages, List<File> imageFiles, String model, ChatbotLlmStreamHandler streamHandler) {
-        OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model);
-        OllamaChatRequest ollamaChatRequestModel = builder
-                .withMessages(messages)
-                .withMessage(OllamaChatMessageRole.USER, message, imageFiles)
-                .withOptions(options)
-                .build();
-        try {
-            OllamaChatResult chat = ollamaAPI.chat(ollamaChatRequestModel, streamHandler);
-            chat.getResponse();
-            streamHandler.inputHasStopped();
-            return chat.getChatHistory();
-        } catch (Exception e) {
-            throw new RuntimeException("Could not ask '" + message + "' with images on model '" + model + "'", e);
+        } finally {
+            working.set(false);
         }
     }
 
@@ -174,11 +143,18 @@ public class OllamaManager {
         }
 
         try {
-            ollamaAPI.createModelWithFilePath(llmModelFileForModelCard.getKey(),
+            working.set(true);
+            newOllamaApi().createModelWithFilePath(llmModelFileForModelCard.getKey(),
                     modelFile.toAbsolutePath().toString());
         } catch (Exception e) {
-            e.printStackTrace();
             throw new RuntimeException("Could not create model by model file '" + modelFile + "'", e);
+        } finally {
+            working.set(false);
         }
+    }
+
+    @Override
+    public boolean isWorking() {
+        return working.get();
     }
 }

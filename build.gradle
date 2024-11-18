@@ -12,12 +12,18 @@ repositories {
 dependencies {
 	implementation 'jakarta.validation:jakarta.validation-api:3.1.0'
 	implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.1' // has no module info
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.1'
+    implementation 'org.projectlombok:lombok:1.18.36'
+    implementation 'org.slf4j:slf4j-api:2.0.16'
+    implementation 'org.jsoup:jsoup:1.18.1'
     // implementation 'vio.github.ollama4j:ollama4j:1.0.89' // not in mavenCentral
     implementation files('libs/ollama4j-1.0.89.jar')
+
 }
 
-toolchain {
-    languageVersion = JavaLanguageVersion.of(23)
+java {
+    sourceCompatibility = '21'
+    targetCompatibility = '21'
 }
 
 javafx {
@@ -26,7 +32,7 @@ javafx {
 }
 
 application {
-    mainClass = 'de.vonrauchhaupt.chatbot.ChatBot' // Replace with your main class
+    mainClass = 'de.vrauchhaupt.chatbotfx.ChatBot' // Replace with your main class
 	mainModule = "chatbotfx"
 }
 
@@ -45,5 +51,5 @@ jlink {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 23 // Ensure the compiled bytecode targets Java 23
+    options.release = 21 // Ensure the compiled bytecode targets Java 21
 }

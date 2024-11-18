@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="de.vrauchhaupt.chatbotfx.view.SettingsWindow"
+      prefWidth="600.0" spacing="15">
+    <VBox spacing="3">
+        <Label text="Path To Chatbot Model Cards" style="-fx-font-weight:bold;"/>
+        <HBox>
+            <TextField fx:id="textFieldPathToModelCards" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Button fx:id="buttonPathToModelCards"/>
+        </HBox>
+        <Label text="" fx:id="warningPathToModelCards"/>
+    </VBox>
+
+    <VBox spacing="3">
+        <Label text="Path To Llm Model Files" style="-fx-font-weight:bold;"/>
+        <HBox>
+            <TextField fx:id="textFieldPathToLlmModelFiles" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Button fx:id="buttonPathToLlmModelFiles"/>
+        </HBox>
+        <Label text="" fx:id="warningPathToLlmModelFiles"/>
+    </VBox>
+
+    <VBox spacing="3">
+        <Label text="URL To Ollama Server" style="-fx-font-weight:bold;"/>
+        <TextField fx:id="textFieldUrlToOllamaHost"/>
+        <Label text="" fx:id="warningUrlToOllamaHost"/>
+    </VBox>
+
+    <VBox spacing="3">
+        <Label text="Path To Piper TTS" style="-fx-font-weight:bold;"/>
+        <HBox>
+            <TextField fx:id="textFieldPathToPiper" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Button fx:id="buttonPathToPiper"/>
+        </HBox>
+        <Label text="" fx:id="warningPathToPiper"/>
+    </VBox>
+
+    <VBox spacing="3">
+        <Label text="URL To WebUi Forge Server" style="-fx-font-weight:bold;"/>
+            <TextField fx:id="textFieldUrlToWebuiForgeHost"/>
+        <Label text="" fx:id="warningUrlToWebuiForgeHost"/>
+    </VBox>
+    <HBox spacing="5">
+        <Button fx:id="buttonSave" text="Save" defaultButton="true"/>
+        <Button fx:id="buttonQuit" text="Quit ChatBot FX" defaultButton="true"/>
+    </HBox>
+    <padding>
+        <Insets topRightBottomLeft="10"/>
+    </padding>
+</VBox>

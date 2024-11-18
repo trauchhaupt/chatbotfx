@@ -6,17 +6,17 @@ import de.vrauchhaupt.chatbotfx.model.TtsSentence;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.SourceDataLine;
-import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class PiperManager extends AbstractManager {
-    private static final File PIPER_DIRECTORY = new File("F:/projects/piper/");
     private static PiperManager INSTANCE = null;
     private final AtomicBoolean isPlayingSound = new AtomicBoolean();
     private Queue<TtsSentence> queueOfTextsToProduce = new LinkedList<>();
@@ -67,8 +67,26 @@ public class PiperManager extends AbstractManager {
         }
     }
 
+    public boolean checkPiperIsAvailable() {
+        return getPiperExe() != null;
+    }
+
+    private Path getPiperExe() {
+        Path pathToPiper = SettingsManager.instance().getPathToPiper();
+        if (pathToPiper == null || !Files.isDirectory(pathToPiper))
+            return null;
+        Path piperExe = pathToPiper.resolve("piper.exe");
+        if (Files.isRegularFile(piperExe))
+            return piperExe;
+        return null;
+    }
+
+
     private void generateTTS(ControlledThread thread) {
-        List<String> command = List.of(PIPER_DIRECTORY.getAbsolutePath() + "/piper.exe",
+        Path piperExe = getPiperExe();
+        if (piperExe == null)
+            throw new RuntimeException("Please review your settings. Piper is not accessible by file.");
+        List<String> command = List.of(piperExe.toAbsolutePath().toString(),
                 "--model", "en_GB-cori-high.onnx",
                 "--config", "en_GB-cori-high.onnx.json",
                 "--output_raw"
@@ -83,7 +101,7 @@ public class PiperManager extends AbstractManager {
     private void startPiperCommand(List<String> command, TtsSentence ttsSentence) {
         try {
             ProcessBuilder processBuilder = new ProcessBuilder(command);
-            processBuilder.directory(PIPER_DIRECTORY);
+            processBuilder.directory(SettingsManager.instance().getPathToPiper().toAbsolutePath().toFile());
             Process piperProcess = processBuilder.start();
 
             Thread voiceCollectorThread = ThreadManager.instance().startThread("Piper voice collector", () -> collectVoices(piperProcess, ttsSentence));
@@ -130,5 +148,7 @@ public class PiperManager extends AbstractManager {
                 isPlayingSound.get();
 
     }
+
+
 }
 

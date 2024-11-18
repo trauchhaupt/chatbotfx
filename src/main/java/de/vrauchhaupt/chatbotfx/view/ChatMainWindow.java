@@ -1,9 +1,9 @@
-package de.vrauchhaupt.chatbot.view;
+package de.vrauchhaupt.chatbotfx.view;
 
-import de.vrauchhaupt.chatbot.manager.*;
-import de.vrauchhaupt.chatbot.model.ChatViewModel;
-import de.vrauchhaupt.chatbot.model.DisplayRole;
-import de.vrauchhaupt.chatbot.model.LlmModelCardJson;
+import de.vrauchhaupt.chatbotfx.manager.*;
+import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
+import de.vrauchhaupt.chatbotfx.model.DisplayRole;
+import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import io.github.ollama4j.models.chat.OllamaChatMessage;
 import javafx.animation.Transition;
 import javafx.application.Platform;
@@ -89,7 +89,12 @@ public class ChatMainWindow implements IPrintFunction {
         buttonSave.setOnAction(this::buttonSaveClicked);
         buttonLoad.setOnAction(this::buttonLoadClicked);
 
-        List<LlmModelCardJson> availableModelCards = new ArrayList<>(LlmModelCardManager.instance().getAvailableModelCards());
+        List<LlmModelCardJson> availableModelCards = new ArrayList<>();
+        try {
+            availableModelCards = new ArrayList<>(LlmModelCardManager.instance().getAvailableModelCards());
+        } catch (Exception e) {
+            System.err.println("Could not load available model cards, config seems to be invalid");
+        }
         availableModelCards.sort(Comparator.naturalOrder());
         choiceBoxModel.getItems().addAll(availableModelCards);
         choiceBoxModel.setConverter(new StringConverter<>() {
@@ -309,6 +314,9 @@ public class ChatMainWindow implements IPrintFunction {
     }
 
     private void buttonSendClicked(ActionEvent actionEvent) {
+        if (!SettingsManager.instance().assertAllSettingsValid())
+            return;
+
         final String curSystemPrompt = (textFieldSystemInput.getText() == null ? "" : textFieldSystemInput.getText()).trim();
         final String curUserPrompt = (textFieldUserInput.getText() == null ? "" : textFieldUserInput.getText()).trim();
         String tmpSystemPromptForImage = curSystemPrompt;

@@ -40,6 +40,7 @@ public class ThreadManager extends AbstractManager implements Thread.UncaughtExc
 
     @Override
     public void uncaughtException(Thread t, Throwable e) {
+        e.printStackTrace();
         errors.add(new ErrorDto(e.getMessage(), e));
     }
 

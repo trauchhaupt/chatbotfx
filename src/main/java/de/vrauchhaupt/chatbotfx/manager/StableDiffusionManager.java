@@ -9,7 +9,10 @@ import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -22,7 +25,9 @@ public class StableDiffusionManager extends AbstractManager {
 
     public static final int GENERATED_IMAGE_WIDTH = 256;
     public static final int GENERATED_IMAGE_HEIGHT = 384;
-    private static final String apiUrl = "http://127.0.0.1:7860/sdapi/v1/txt2img";
+
+    private static final int UPSCALED_GENERATED_IMAGE_WIDTH = 2 * GENERATED_IMAGE_WIDTH;
+    private static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 2 * GENERATED_IMAGE_HEIGHT;
 
     private static StableDiffusionManager INSTANCE = null;
 
@@ -32,13 +37,36 @@ public class StableDiffusionManager extends AbstractManager {
         return INSTANCE;
     }
 
+    public final boolean checkWebUiForgeIsRunning() {
+        try {
+            // Create a URL object
+            URL urlObj = new URL(SettingsManager.instance().getWebuiForgeHost());
+            // Open connection
+            HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(1000); // 5 seconds timeout
+            connection.setReadTimeout(1000);
+            connection.connect();
+
+            // Check HTTP response code
+            int responseCode = connection.getResponseCode();
+            // HTTP codes in 200-299 range indicate success
+            return responseCode >= 200 && responseCode < 300;
+        } catch (IOException e) {
+            // Exception indicates URL did not resolve
+            System.err.println("Failed to resolve webUi_forge URL: " + SettingsManager.instance().getWebuiForgeHost());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
     public void renderWithPrompt(int index, LlmModelCardJson modelCardJson, String prompt, IPrintFunction imageConsumer) {
         if (modelCardJson.getTxt2ImgModel() == null || modelCardJson.getTxt2ImgModel().isEmpty())
             return;
         new Thread(() -> {
             try {
                 renderWithPromptInternally(index, modelCardJson, prompt, imageConsumer);
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -52,7 +80,7 @@ public class StableDiffusionManager extends AbstractManager {
             logLn("Aquiring image # '" + index + "'");
 
             ObjectNode payload = JsonNodeFactory.instance.objectNode();
-            payload.put("prompt", prompt );
+            payload.put("prompt", prompt);
             payload.put("negative_promt", "low quality, blurry, bad anatomy, distorted faces, closed eyes");
             payload.put("sd_model_name", modelCardJson.getTxt2ImgModel());
             if (modelCardJson.getTxt2ImgModelStyle() != null && !modelCardJson.getTxt2ImgModelStyle().isEmpty()) {
@@ -63,15 +91,15 @@ public class StableDiffusionManager extends AbstractManager {
             payload.put("steps", 20);
             payload.put("sampler_name", "Euler");
             payload.put("cfg_scale", 7);
-            payload.put("width", GENERATED_IMAGE_WIDTH);
-            payload.put("height", GENERATED_IMAGE_HEIGHT);
+            payload.put("width", UPSCALED_GENERATED_IMAGE_WIDTH);
+            payload.put("height", UPSCALED_GENERATED_IMAGE_HEIGHT);
             payload.put("enable_hr", false);
             payload.put("restore_faces", true);
 
             String payloadString = payload.toString();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(apiUrl))
+                    .uri(URI.create(SettingsManager.instance().getWebuiForgeHost()))
                     .header("Content-Type", "application/json; utf-8")
                     .POST(HttpRequest.BodyPublishers.ofString(payloadString, StandardCharsets.UTF_8))
                     .build();

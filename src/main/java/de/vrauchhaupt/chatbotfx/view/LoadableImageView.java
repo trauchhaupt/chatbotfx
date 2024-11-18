@@ -52,6 +52,8 @@ public class LoadableImageView extends StackPane {
 
     public void setImage(Image image, Path representingImageFile) {
         imageView.setImage(image);
+        imageView.setPreserveRatio(true);
+        imageView.setFitWidth(StableDiffusionManager.GENERATED_IMAGE_WIDTH);
         this.representingImageFile = representingImageFile;
     }
 }
