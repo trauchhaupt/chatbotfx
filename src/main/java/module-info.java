@@ -1,4 +1,4 @@
-module Chatbot {
+module chatbotfx {
 
     requires com.fasterxml.jackson.databind;
     requires jakarta.validation;

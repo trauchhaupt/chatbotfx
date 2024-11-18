@@ -16,7 +16,7 @@ dependencies {
     // implementation 'vio.github.ollama4j:ollama4j:1.0.89' // not in mavenCentral
 	implementation files('libs/ollama4j-1.0.89.jar')
 	implementation 'jakarta.validation:jakarta.validation-api:3.1.0'
-	implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.1'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.1' // has no module info
 }
 
 javafx {
