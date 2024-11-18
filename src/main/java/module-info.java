@@ -1,7 +1,4 @@
 module chatbotfx {
-    requires com.fasterxml.jackson.annotation;
-    requires com.fasterxml.jackson.core;
-    requires com.fasterxml.jackson.databind;
     requires jakarta.validation;
     requires javafx.controls;
     requires javafx.fxml;
@@ -10,6 +7,9 @@ module chatbotfx {
     requires java.net.http;
     requires java.logging;
     requires ollama4j;
+    requires com.fasterxml.jackson.annotation;
+    requires com.fasterxml.jackson.core;
+    requires com.fasterxml.jackson.databind;
 
     exports de.vrauchhaupt.chatbot to javafx.controls,javafx.graphics, javafx.fxml;
     exports de.vrauchhaupt.chatbot.view to javafx.controls,javafx.graphics, javafx.fxml;

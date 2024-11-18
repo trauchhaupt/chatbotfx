@@ -16,6 +16,10 @@ dependencies {
     implementation files('libs/ollama4j-1.0.89.jar')
 }
 
+toolchain {
+    languageVersion = JavaLanguageVersion.of(23)
+}
+
 javafx {
     version = '23.0.1' // Set the JavaFX version
     modules = ['javafx.controls', 'javafx.fxml'] // Add additional modules as needed
@@ -38,4 +42,8 @@ jlink {
             imageOptions += ['--win-console']
         }
     }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 23 // Ensure the compiled bytecode targets Java 23
 }
