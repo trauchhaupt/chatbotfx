@@ -34,14 +34,6 @@ javafx {
 application {
     mainClass = 'de.vrauchhaupt.chatbotfx.ChatBot' // Replace with your main class
 	mainModule = "chatbotfx"
-    applicationDefaultJvmArgs = [
-            "--add-exports=ollama4j/io.github.ollama4j.models.request=com.fasterxml.jackson.databind",
-            "--add-opens=ollama4j/io.github.ollama4j=com.fasterxml.jackson.databind",
-            "--add-opens=ollama4j/io.github.ollama4j.models.chat=com.fasterxml.jackson.databind",
-            "--add-opens=ollama4j/io.github.ollama4j.models.generate=com.fasterxml.jackson.databind",
-            "--add-opens=ollama4j/io.github.ollama4j.models.response=com.fasterxml.jackson.databind",
-            "--add-opens=ollama4j/io.github.ollama4j.models.request=com.fasterxml.jackson.databind"
-    ]
 }
 
 jlink {

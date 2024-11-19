@@ -40,9 +40,9 @@ public class StableDiffusionManager extends AbstractManager {
     public final boolean checkWebUiForgeIsRunning() {
         try {
             // Create a URL object
-            URL urlObj = new URL(SettingsManager.instance().getWebuiForgeHost());
+            URI urlObj = URI.create(SettingsManager.instance().getWebuiForgeHost());
             // Open connection
-            HttpURLConnection connection = (HttpURLConnection) urlObj.openConnection();
+            HttpURLConnection connection = (HttpURLConnection) urlObj.toURL().openConnection();
             connection.setRequestMethod("GET");
             connection.setConnectTimeout(1000); // 5 seconds timeout
             connection.setReadTimeout(1000);
