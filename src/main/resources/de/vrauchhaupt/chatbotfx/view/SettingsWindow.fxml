@@ -41,10 +41,20 @@
     </VBox>
 
     <VBox spacing="3">
+        <Label text="Path to TTS Models (onnx)" style="-fx-font-weight:bold;"/>
+        <HBox>
+        <TextField fx:id="textFieldPathToTtsModels" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+            <Button fx:id="buttonPathToTtsModels"/>
+        </HBox>
+        <Label text="" fx:id="warningPathToTtsModels"/>
+    </VBox>
+
+    <VBox spacing="3">
         <Label text="URL To WebUi Forge Server" style="-fx-font-weight:bold;"/>
             <TextField fx:id="textFieldUrlToWebuiForgeHost"/>
         <Label text="" fx:id="warningUrlToWebuiForgeHost"/>
     </VBox>
+
     <HBox spacing="5">
         <Button fx:id="buttonSave" text="Save" defaultButton="true"/>
         <Button fx:id="buttonQuit" text="Quit ChatBot FX" defaultButton="true"/>

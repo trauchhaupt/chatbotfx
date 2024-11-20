@@ -20,7 +20,6 @@ import java.nio.file.Path;
 import java.util.function.Predicate;
 
 public class SettingsWindow {
-
     @FXML
     private Button buttonSave;
     @FXML
@@ -48,6 +47,12 @@ public class SettingsWindow {
     @FXML
     private Button buttonPathToPiper;
     @FXML
+    private TextField textFieldPathToTtsModels;
+    @FXML
+    private Label warningPathToTtsModels;
+    @FXML
+    private Button buttonPathToTtsModels;
+    @FXML
     private Label warningUrlToWebuiForgeHost;
     @FXML
     private TextField textFieldUrlToWebuiForgeHost;
@@ -57,13 +62,16 @@ public class SettingsWindow {
         invisibleIfNoText(warningPathToLlmModelFiles);
         invisibleIfNoText(warningPathToModelCards);
         invisibleIfNoText(warningPathToPiper);
+        invisibleIfNoText(warningPathToTtsModels);
         invisibleIfNoText(warningUrlToWebuiForgeHost);
         invisibleIfNoText(warningUrlToOllamaHost);
 
         createFileSelection(textFieldPathToLlmModelFiles, buttonPathToLlmModelFiles);
         createFileSelection(textFieldPathToPiper, buttonPathToPiper);
+        createFileSelection(textFieldPathToTtsModels, buttonPathToTtsModels);
         createFileSelection(textFieldPathToModelCards, buttonPathToModelCards);
         textFieldPathToPiper.setText(SettingsManager.instance().getPathToPiper() == null ? "" : SettingsManager.instance().getPathToPiper().toAbsolutePath().toString());
+        textFieldPathToTtsModels.setText(SettingsManager.instance().getPathToTtsModelFiles() == null ? "" : SettingsManager.instance().getPathToTtsModelFiles().toAbsolutePath().toString());
         textFieldPathToLlmModelFiles.setText(SettingsManager.instance().getPathToLlmModelFiles() == null ? "" : SettingsManager.instance().getPathToLlmModelFiles().toAbsolutePath().toString());
         textFieldPathToModelCards.setText(SettingsManager.instance().getPathToLlmModelCards() == null ? "" : SettingsManager.instance().getPathToLlmModelCards().toAbsolutePath().toString());
         textFieldUrlToWebuiForgeHost.setText(SettingsManager.instance().getWebuiForgeHost());
@@ -77,6 +85,8 @@ public class SettingsWindow {
         isWebuiForgeHostValid();
         textFieldPathToPiper.textProperty().addListener((obs, oldV, newV) -> isPathToPiperValid());
         isPathToPiperValid();
+        textFieldPathToTtsModels.textProperty().addListener((obs, oldV, newV) -> isPathToTtsModelsValid());
+        isPathToTtsModelsValid();
         textFieldPathToModelCards.textProperty().addListener((obs, oldV, newV) -> isPathToModelCardsValid());
         isPathToModelCardsValid();
 
@@ -84,24 +94,6 @@ public class SettingsWindow {
         buttonQuit.setOnAction(this::buttonQuitClicked);
         Platform.runLater(() -> textFieldPathToModelCards.requestFocus());
 
-    }
-
-    private void isWebuiForgeHostValid() {
-        if (!StableDiffusionManager.instance().checkWebUiForgeIsRunning()) {
-            warningUrlToWebuiForgeHost.setText("The WebUI_Forge Server seems not to be running. Try starting it with 'run.bat' or check the host / port.");
-        } else {
-            warningUrlToWebuiForgeHost.setText("");
-        }
-        checkButtonSaveState();
-    }
-
-    private void isOllamaHostValid() {
-        if (!OllamaManager.instance().checkOllamaServerRunning()) {
-            warningUrlToOllamaHost.setText("The OLLAMA Server seems not to be running. Try starting it with 'ollama serve' or check the host / port.");
-        } else {
-            warningUrlToOllamaHost.setText("");
-        }
-        checkButtonSaveState();
     }
 
     private void checkButtonSaveState() {
@@ -115,6 +107,8 @@ public class SettingsWindow {
         if (warningPathToModelCards.getText() != null && !warningPathToModelCards.getText().isEmpty())
             return false;
         if (warningPathToPiper.getText() != null && !warningPathToPiper.getText().isEmpty())
+            return false;
+        if (warningPathToTtsModels.getText() != null && !warningPathToTtsModels.getText().isEmpty())
             return false;
         if (warningUrlToOllamaHost.getText() != null && !warningUrlToOllamaHost.getText().isEmpty())
             return false;
@@ -172,6 +166,24 @@ public class SettingsWindow {
         return true;
     }
 
+    private void isWebuiForgeHostValid() {
+        if (!StableDiffusionManager.instance().checkWebUiForgeIsRunning()) {
+            warningUrlToWebuiForgeHost.setText("The WebUI_Forge Server seems not to be running. Try starting it with 'run.bat' or check the host / port.");
+        } else {
+            warningUrlToWebuiForgeHost.setText("");
+        }
+        checkButtonSaveState();
+    }
+
+    private void isOllamaHostValid() {
+        if (!OllamaManager.instance().checkOllamaServerRunning()) {
+            warningUrlToOllamaHost.setText("The OLLAMA Server seems not to be running. Try starting it with 'ollama serve' or check the host / port.");
+        } else {
+            warningUrlToOllamaHost.setText("");
+        }
+        checkButtonSaveState();
+    }
+
     private void isPathToLlmModelFilesValid() {
         validateDirectoryExists(textFieldPathToLlmModelFiles, warningPathToLlmModelFiles, x -> x.toString().endsWith(".gguf"), "*.gguf");
         checkButtonSaveState();
@@ -179,6 +191,11 @@ public class SettingsWindow {
 
     private void isPathToPiperValid() {
         validateDirectoryExists(textFieldPathToPiper, warningPathToPiper, x -> "piper.exe".equals(x.getFileName().toString()), "piper.exe");
+        checkButtonSaveState();
+    }
+
+    private void isPathToTtsModelsValid() {
+        validateDirectoryExists(textFieldPathToTtsModels, warningPathToTtsModels, x -> x.toString().endsWith(".onnx"), "*.onnx");
         checkButtonSaveState();
     }
 
@@ -216,6 +233,7 @@ public class SettingsWindow {
 
     public void persist() {
         SettingsManager.instance().setPathToPiper(new File(textFieldPathToPiper.getText()).toPath());
+        SettingsManager.instance().setPathToTtsModelFiles(new File(textFieldPathToTtsModels.getText()).toPath());
         SettingsManager.instance().setPathToLlmModelFiles(new File(textFieldPathToLlmModelFiles.getText()).toPath());
         SettingsManager.instance().setPathToLlmModelCards(new File(textFieldPathToModelCards.getText()).toPath());
         SettingsManager.instance().setWebuiForgeHost(textFieldUrlToWebuiForgeHost.getText());

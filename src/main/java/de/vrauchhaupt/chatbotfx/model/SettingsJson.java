@@ -61,4 +61,7 @@ public class SettingsJson extends AbstractJson {
         this.ollamaHost = ollamaHost;
         return this;
     }
+
+
+
 }

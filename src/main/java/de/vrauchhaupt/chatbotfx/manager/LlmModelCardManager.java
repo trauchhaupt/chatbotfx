@@ -78,12 +78,9 @@ public class LlmModelCardManager extends AbstractManager {
     private List<Model> getAvailableLlmOllamaModels() {
         if (availableLlmOllamaModels == null) {
             availableLlmOllamaModels = new ArrayList<>(OllamaManager.instance().listModels());
-            logLn("LLM Models (ollama):");
-            logLn("--------------------");
             for (Model model : availableLlmOllamaModels) {
-                logLn(model.getModelName());
+                logLn("Found LLM Model '" + model.getModelName() + "'");
             }
-            logLn();
         }
         return availableLlmOllamaModels;
     }
@@ -137,8 +134,6 @@ public class LlmModelCardManager extends AbstractManager {
         if (availableModelCards == null) {
             availableModelCards = new ArrayList<>();
             Path pathToModelCards = SettingsManager.instance().getPathToLlmModelCards();
-            logLn("LLM Model Cards : " + pathToModelCards.toAbsolutePath());
-            logLn("-----------------");
             try (Stream<Path> dirListing = Files.list(pathToModelCards)) {
                 dirListing.forEach(this::deserializeAndEndToAvailableModelCards);
             } catch (Exception e) {
@@ -176,7 +171,6 @@ public class LlmModelCardManager extends AbstractManager {
                             "' and no gguf files in '" + SettingsManager.instance().getPathToLlmModelFiles().toAbsolutePath() + "'");
                 }
             }
-            logLn();
         }
         return availableModelCards;
     }
@@ -217,7 +211,7 @@ public class LlmModelCardManager extends AbstractManager {
                     logLn(modelCardJson.getModelCardName() + " refers to non existing model '" + modelCardJson + "'");
                 else {
                     availableModelCards.add(modelCardJson);
-                    logLn(modelCardJson.getModelCardName());
+                    logLn("Found model card '" + modelCardJson.getModelCardName() + "'");
                 }
             }
         } catch (Exception e) {

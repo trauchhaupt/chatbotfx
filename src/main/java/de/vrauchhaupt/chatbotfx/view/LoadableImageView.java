@@ -30,7 +30,8 @@ public class LoadableImageView extends StackPane {
         getChildren().add(imageView);
 
         try (InputStream is = LoadableImageView.class.getResourceAsStream("LoadingAnimation.gif")) {
-            imageView.setImage(new Image(is));
+            Image image = new Image(is);
+            imageView.setImage(image);
         } catch (IOException e) {
             throw new RuntimeException("Cannot load loading image 'LoadingAnimation.gif'", e);
         }
@@ -51,6 +52,11 @@ public class LoadableImageView extends StackPane {
     }
 
     public void setImage(Image image, Path representingImageFile) {
+        double factor =  StableDiffusionManager.GENERATED_IMAGE_WIDTH / image.getWidth();
+        double perfectHeight = (image.getHeight() * factor) + 2.0;
+        setPrefHeight(perfectHeight);
+        setMinHeight(perfectHeight);
+        setMaxHeight(perfectHeight);
         imageView.setImage(image);
         imageView.setPreserveRatio(true);
         imageView.setFitWidth(StableDiffusionManager.GENERATED_IMAGE_WIDTH);

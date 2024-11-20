@@ -11,10 +11,7 @@ import javafx.beans.value.ChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Group;
-import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
@@ -40,6 +37,15 @@ public class ChatMainWindow implements IPrintFunction {
     private static final float WAITING_CIRCLE_SIZE = 7;
 
     @FXML
+    private MenuItem menuItemBaseSettings;
+    @FXML
+    private MenuItem menuItemReloadModels;
+    @FXML
+    private CheckMenuItem menuItemTts;
+    @FXML
+    private CheckMenuItem menuItemTxt2Img;
+
+    @FXML
     private Pane paneLoadingBackground;
     @FXML
     private Button buttonSend;
@@ -63,8 +69,6 @@ public class ChatMainWindow implements IPrintFunction {
     @FXML
     private TextField textFieldUserInput;
     @FXML
-    private Button buttonReloadModels;
-    @FXML
     private Button buttonSave;
     @FXML
     private Button buttonClear;
@@ -83,7 +87,6 @@ public class ChatMainWindow implements IPrintFunction {
     @FXML
     public void initialize() {
         setupLoadingBackground();
-        buttonReloadModels.setOnAction(this::buttonReloadModelsClicked);
         buttonSend.setOnAction(this::buttonSendClicked);
         buttonClear.setOnAction(this::buttonClearClicked);
         buttonSave.setOnAction(this::buttonSaveClicked);
@@ -127,10 +130,16 @@ public class ChatMainWindow implements IPrintFunction {
         containerImages.heightProperty().addListener((observable, oldValue, newValue) -> {
             scrollPaneImages.setVvalue(1.0); // Scroll to the bottom
         });
+
+        menuItemBaseSettings.setOnAction(x -> SettingsManager.instance().showSettingsWindow());
+        menuItemReloadModels.setOnAction(this::buttonReloadModelsClicked);
+        menuItemTts.selectedProperty().bindBidirectional(SettingsManager.instance().ttsGenerationProperty());
+        menuItemTxt2Img.selectedProperty().bindBidirectional(SettingsManager.instance().text2ImageGenerationProperty());
     }
 
     private void buttonReloadModelsClicked(ActionEvent actionEvent) {
         choiceBoxModel.valueProperty().removeListener(modelCardSelectionChangeListener);
+        PiperManager.instance().reloadTtsModels();
         List<LlmModelCardJson> availableModelCards = new ArrayList<>(LlmModelCardManager.instance().reloadModelCards());
         choiceBoxModel.getItems().setAll(availableModelCards);
         choiceBoxModel.setValue(LlmModelCardManager.instance().getSelectedLlModelCard());
@@ -325,7 +334,8 @@ public class ChatMainWindow implements IPrintFunction {
 
         if (!tmpSystemPromptForImage.isEmpty()) {
             render(DisplayRole.SYSTEM, tmpSystemPromptForImage);
-            fileNewImageRendering(tmpSystemPromptForImage);
+            if (SettingsManager.instance().isText2ImageGeneration())
+                fileNewImageRendering(tmpSystemPromptForImage);
         }
         if (!curUserPrompt.isEmpty())
             render(DisplayRole.USER, curUserPrompt);

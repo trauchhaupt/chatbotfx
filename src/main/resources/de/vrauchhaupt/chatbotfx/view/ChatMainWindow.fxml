@@ -9,27 +9,41 @@
             fx:controller="de.vrauchhaupt.chatbotfx.view.ChatMainWindow"
             prefHeight="600.0" prefWidth="600.0">
     <top>
-        <HBox alignment="BASELINE_LEFT" spacing="5" maxWidth="Infinity">
-            <Label text="Model : "/>
-            <ChoiceBox fx:id="choiceBoxModel" minWidth="200"/>
-            <padding>
-                <Insets topRightBottomLeft="5"/>
-            </padding>
-            <Button fx:id="buttonReloadModels" text="Reload Models"/>
-            <Button fx:id="buttonClear" text="Clear"/>
-            <Button fx:id="buttonSave" text="Save"/>
-            <Button fx:id="buttonLoad" text="Load"/>
-            <StackPane fx:id="paneLoadBlocker" mouseTransparent="true" disable="true">
-                <Group fx:id="groupLoadingAnimation" mouseTransparent="true" disable="true"/>
-            </StackPane>
-        </HBox>
+        <VBox>
+            <MenuBar fx:id="menuBar">
+                <Menu fx:id="menuSettings" text="Settings">
+                    <MenuItem fx:id="menuItemBaseSettings" text="Base Settings"/>
+                    <MenuItem fx:id="menuItemReloadModels" text="Reload Models"/>
+                </Menu>
+                <Menu text="AI Features">
+                    <CheckMenuItem fx:id="menuItemTts" text="Text to Speech (TTS)" />
+                    <CheckMenuItem fx:id="menuItemTxt2Img" text="Text to Image (T2I)" />
+
+                </Menu>
+            </MenuBar>
+            <HBox alignment="BASELINE_LEFT" spacing="5" maxWidth="Infinity">
+                <Label text="Model : "/>
+                <ChoiceBox fx:id="choiceBoxModel" minWidth="200"/>
+                <padding>
+                    <Insets topRightBottomLeft="5"/>
+                </padding>
+                <Button fx:id="buttonClear" text="Clear"/>
+                <Button fx:id="buttonSave" text="Save"/>
+                <Button fx:id="buttonLoad" text="Load"/>
+            </HBox>
+        </VBox>
     </top>
     <center>
         <ScrollPane fx:id="scrollPaneChat" fitToWidth="true" vbarPolicy="ALWAYS">
-            <VBox fx:id="containerChat" fillWidth="true" spacing="3">
-                <padding>
-                    <Insets top="5" left="5" right="5" bottom="15"/>
-                </padding>
+            <VBox>
+                <VBox fx:id="containerChat" fillWidth="true" spacing="3">
+                    <padding>
+                        <Insets top="5" left="5" right="5" bottom="15"/>
+                    </padding>
+                </VBox>
+                <StackPane fx:id="paneLoadBlocker" mouseTransparent="true" disable="true">
+                    <Group fx:id="groupLoadingAnimation" mouseTransparent="true" disable="true"/>
+                </StackPane>
             </VBox>
         </ScrollPane>
     </center>

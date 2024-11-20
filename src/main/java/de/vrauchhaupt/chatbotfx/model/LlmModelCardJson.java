@@ -12,6 +12,7 @@ public class LlmModelCardJson extends AbstractJson implements Comparable<LlmMode
     private String system = "";
     private String txt2ImgModel = "";
     private String txt2ImgModelStyle = "";
+    private String ttsModel = "en_GB_alba-medium";
 
     public String getLlmModel() {
         return llmModel;
@@ -101,5 +102,14 @@ public class LlmModelCardJson extends AbstractJson implements Comparable<LlmMode
     @Override
     public int compareTo(LlmModelCardJson o) {
         return Comparator.comparing(LlmModelCardJson::getModelCardName).compare(this, o);
+    }
+
+    public String getTtsModel() {
+        return ttsModel;
+    }
+
+    public LlmModelCardJson setTtsModel(String ttsModel) {
+        this.ttsModel = ttsModel;
+        return this;
     }
 }

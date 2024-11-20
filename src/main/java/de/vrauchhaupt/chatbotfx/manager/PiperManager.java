@@ -1,11 +1,15 @@
 package de.vrauchhaupt.chatbotfx.manager;
 
 import de.vrauchhaupt.chatbotfx.model.ControlledThread;
+import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import de.vrauchhaupt.chatbotfx.model.TtsSentence;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.SourceDataLine;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -19,13 +23,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class PiperManager extends AbstractManager {
     private static PiperManager INSTANCE = null;
     private final AtomicBoolean isPlayingSound = new AtomicBoolean();
-    private Queue<TtsSentence> queueOfTextsToProduce = new LinkedList<>();
-    private Queue<TtsSentence> queueOfTextsToPlay = new LinkedList<>();
+    private final Queue<TtsSentence> queueOfTextsToProduce = new LinkedList<>();
+    private final Queue<TtsSentence> queueOfTextsToPlay = new LinkedList<>();
+    private final ObservableList<String> ttsModels = FXCollections.observableArrayList();
 
 
     public PiperManager() {
         ThreadManager.instance().startEndlessThread("TTS Generation", this::generateTTS);
         ThreadManager.instance().startEndlessThread("TTS Playing", this::playSounds);
+        SettingsManager.instance().pathToTtsModelFilesProperty().addListener((obs, oldv, newv) -> reloadTtsModels());
+        reloadTtsModels();
 
         try {
             Thread.sleep(100);
@@ -38,6 +45,36 @@ public class PiperManager extends AbstractManager {
         if (INSTANCE == null)
             INSTANCE = new PiperManager();
         return INSTANCE;
+    }
+
+    public void reloadTtsModels() {
+        if (!Files.isDirectory(SettingsManager.instance().getPathToTtsModelFiles())) {
+            System.err.println("Path to TTS model files is invalid '" + SettingsManager.instance().getPathToTtsModelFiles() + "'");
+            ttsModels.clear();
+            return;
+        }
+        try {
+            List<Path> modelConfigs = Files.list(SettingsManager.instance().getPathToTtsModelFiles())
+                    .filter(x -> x.toString().endsWith(".onnx.json"))
+                    .toList();
+            List<Path> modelFiles = Files.list(SettingsManager.instance().getPathToTtsModelFiles())
+                    .filter(x -> x.toString().endsWith(".onnx"))
+                    .toList();
+            List<String> foundModels = new LinkedList<>();
+            for (Path modelFile : modelFiles) {
+                String modelFileName = modelFile.getFileName().toString();
+                String modelName = modelFileName.substring(0, modelFileName.length() - 5);
+                if (modelConfigs.stream().noneMatch(x -> (modelName + ".onnx.json").equals(x.getFileName().toString()))) {
+                    System.err.println("Could not find TTS Model config '" + modelName + ".onnx.json'.");
+                    continue;
+                }
+                System.out.println("Found TTS model '" + modelName + "'");
+                foundModels.add(modelName);
+            }
+            ttsModels.setAll(foundModels);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not list tts model files at '" + SettingsManager.instance().getPathToTtsModelFiles() + "'", e);
+        }
     }
 
     private void playSounds(ControlledThread thread) {
@@ -71,6 +108,10 @@ public class PiperManager extends AbstractManager {
         return getPiperExe() != null;
     }
 
+    public boolean checkTtsModelFilesExists() {
+        return !ttsModels.isEmpty();
+    }
+
     private Path getPiperExe() {
         Path pathToPiper = SettingsManager.instance().getPathToPiper();
         if (pathToPiper == null || !Files.isDirectory(pathToPiper))
@@ -86,9 +127,21 @@ public class PiperManager extends AbstractManager {
         Path piperExe = getPiperExe();
         if (piperExe == null)
             return;
+        // no models there
+        if (ttsModels.isEmpty())
+            return;
+
+        LlmModelCardJson selectedLlModelCard = LlmModelCardManager.instance().getSelectedLlModelCard();
+        String ttsModel = selectedLlModelCard.getTtsModel();
+
+        if (selectedLlModelCard == null || !ttsModels.contains(selectedLlModelCard.getTtsModel())) {
+            ttsModel = ttsModels.get(0);
+            System.err.println("No model selected, or model has incorrect tts model defined (" + ttsModel + "'. Taking default '" + ttsModel + "'");
+        }
+
         List<String> command = List.of(piperExe.toAbsolutePath().toString(),
-                "--model", "en_GB-cori-high.onnx",
-                "--config", "en_GB-cori-high.onnx.json",
+                "--model", SettingsManager.instance().getPathToTtsModelFiles() + "\\" + ttsModel + ".onnx",
+                "--config", SettingsManager.instance().getPathToTtsModelFiles() + "\\" + ttsModel + ".onnx.json",
                 "--output_raw"
         );
         while (!queueOfTextsToProduce.isEmpty()) {
@@ -107,7 +160,8 @@ public class PiperManager extends AbstractManager {
             Thread voiceCollectorThread = ThreadManager.instance().startThread("Piper voice collector", () -> collectVoices(piperProcess, ttsSentence));
 
             try (OutputStream outputStream = piperProcess.getOutputStream()) {
-                String cleanStutter = ttsSentence.getText().replaceAll("\\b(\\w)-\\1?(\\w+)", "$1$2");
+                String withoutAsterix = ttsSentence.getText().replace('*', ' ');
+                String cleanStutter = withoutAsterix.replaceAll("\\b(\\w)-\\1?(\\w+)", "$1$2");
                 if (!cleanStutter.equals(ttsSentence.getText()))
                     System.out.println("Removed stuttering from \n'" + ttsSentence.getText() + "'\nto\n'" + cleanStutter + "'");
                 outputStream.write(cleanStutter.getBytes(StandardCharsets.UTF_8));
@@ -137,6 +191,8 @@ public class PiperManager extends AbstractManager {
     }
 
     public void fileSentence(TtsSentence ttsSentence) {
+        if (!SettingsManager.instance().isTtsGeneration())
+            return;
         queueOfTextsToProduce.add(ttsSentence);
         logLn("Adding to TTSQ '" + ttsSentence.getText() + "'");
     }

@@ -19,7 +19,7 @@ import java.util.List;
 
 public class ChatViewModel implements IMessaging {
 
-    private static final int MAX_RECENT_MESSAGES_TO_SEND = 70;
+    private static final int MAX_RECENT_MESSAGES_TO_SEND = 20;
     private static ChatViewModel INSTANCE = null;
 
     private final ChatbotLlmStreamHandler streamHandler = new ChatbotLlmStreamHandler();

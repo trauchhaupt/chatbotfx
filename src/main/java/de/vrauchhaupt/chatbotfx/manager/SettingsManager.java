@@ -5,6 +5,7 @@ import de.vrauchhaupt.chatbotfx.helper.JsonHelper;
 import de.vrauchhaupt.chatbotfx.model.SettingsJson;
 import de.vrauchhaupt.chatbotfx.view.SettingsWindow;
 import jakarta.validation.constraints.NotNull;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
@@ -37,6 +38,8 @@ public class SettingsManager extends AbstractManager {
     private final SimpleStringProperty selectedLlmModelCard = new SimpleStringProperty();
     private final SimpleStringProperty ollamaHost = new SimpleStringProperty(DEFAULT_OLLAMA_HOST);
     private final SimpleStringProperty webuiForgeHost = new SimpleStringProperty(DEFAULT_WEBUI_FORGE_HOST);
+    private final SimpleBooleanProperty text2ImageGeneration = new SimpleBooleanProperty(true);
+    private final SimpleBooleanProperty ttsGeneration = new SimpleBooleanProperty(true);
 
     private boolean isLoadingInProgress = false;
     private final ChangeListener saveToFileListener = (obs, oldV, newV) -> {
@@ -92,64 +95,35 @@ public class SettingsManager extends AbstractManager {
         return this;
     }
 
-    @NotNull
     public Path getPathToLlmModelCards() {
-        if (pathToLlmModelCards.get() == null)
-            setPathToLlmModelCards(null);
         return pathToLlmModelCards.get();
     }
 
     public SettingsManager setPathToLlmModelCards(Path pathToLlmModelCards) {
-        if (pathToLlmModelCards == null)
-            pathToLlmModelCards = Path.of("model_cards");
-        if (!Files.exists(pathToLlmModelCards))
-            try {
-                Files.createDirectory(pathToLlmModelCards);
-            } catch (IOException e) {
-                throw new RuntimeException("Could not create model card directory '" + pathToLlmModelCards.toAbsolutePath() + "'", e);
-            }
         this.pathToLlmModelCards.set(pathToLlmModelCards);
         return this;
     }
 
-    @NotNull
     public Path getPathToLlmModelFiles() {
-        if (pathToLlmModelFiles.get() == null)
-            setPathToLlmModelFiles(null);
         return pathToLlmModelFiles.get();
     }
 
     public SettingsManager setPathToLlmModelFiles(Path pathToLlmModelFiles) {
-        if (pathToLlmModelFiles == null)
-            pathToLlmModelFiles = Path.of("llm_models");
-        if (!Files.exists(pathToLlmModelFiles))
-            try {
-                Files.createDirectory(pathToLlmModelFiles);
-            } catch (IOException e) {
-                throw new RuntimeException("Could not create llm model files directory '" + pathToLlmModelFiles.toAbsolutePath() + "'", e);
-            }
         this.pathToLlmModelFiles.set(pathToLlmModelFiles);
         return this;
     }
 
-    @NotNull
     public Path getPathToTtsModelFiles() {
-        if (pathToTtsModelFiles.get() == null)
-            setPathToTtsModelFiles(null);
         return pathToTtsModelFiles.get();
     }
 
     public SettingsManager setPathToTtsModelFiles(Path pathToTtsModelFiles) {
-        if (pathToTtsModelFiles == null)
-            pathToTtsModelFiles = Path.of("tts");
-        if (!Files.exists(pathToTtsModelFiles))
-            try {
-                Files.createDirectory(pathToTtsModelFiles);
-            } catch (IOException e) {
-                throw new RuntimeException("Could not create tts model files directory '" + pathToTtsModelFiles.toAbsolutePath() + "'", e);
-            }
         this.pathToTtsModelFiles.set(pathToTtsModelFiles);
         return this;
+    }
+
+    public SimpleObjectProperty<Path> pathToTtsModelFilesProperty() {
+        return pathToTtsModelFiles;
     }
 
     public String getSelectedLlmModelCard() {
@@ -198,6 +172,22 @@ public class SettingsManager extends AbstractManager {
         return webuiForgeHost;
     }
 
+    public boolean isTtsGeneration() {
+        return ttsGeneration.get();
+    }
+
+    public SimpleBooleanProperty ttsGenerationProperty() {
+        return ttsGeneration;
+    }
+
+    public boolean isText2ImageGeneration() {
+        return text2ImageGeneration.get();
+    }
+
+    public SimpleBooleanProperty text2ImageGenerationProperty() {
+        return text2ImageGeneration;
+    }
+
     public SettingsJson toJsonObject() {
         return new SettingsJson()
                 .setPathToPiper(getPathToPiper() == null ? null : getPathToPiper().toAbsolutePath().toString())
@@ -227,53 +217,73 @@ public class SettingsManager extends AbstractManager {
 
 
     public boolean checkAllSettingsValid() {
-        if (!OllamaManager.instance().checkOllamaServerRunning())
+        if (!OllamaManager.instance().checkOllamaServerRunning()) {
+            System.err.println("Ollama is not up and running");
             return false;
-        if (!PiperManager.instance().checkPiperIsAvailable())
+        }
+        if (!PiperManager.instance().checkPiperIsAvailable()) {
+            System.err.println("Piper is not available");
             return false;
-        if (!StableDiffusionManager.instance().checkWebUiForgeIsRunning())
+        }
+        if (!PiperManager.instance().checkTtsModelFilesExists()) {
+            System.err.println("No TTS models are found");
             return false;
-        if (!LlmModelCardManager.instance().checkIfLlmModelFilesExist())
+        }
+        if (!StableDiffusionManager.instance().checkWebUiForgeIsRunning()) {
+            System.err.println("WebUI Forge is not up and running");
             return false;
-        if (!LlmModelCardManager.instance().checkIfModelCardsExist())
+        }
+        if (!LlmModelCardManager.instance().checkIfLlmModelFilesExist()) {
+            System.err.println("No LLM Model Files can be found");
             return false;
+        }
+        if (!LlmModelCardManager.instance().checkIfModelCardsExist()) {
+            System.err.println("No Model cards can be found");
+            return false;
+        }
         return true;
     }
+
 
     public boolean assertAllSettingsValid() {
         boolean tmpValid = checkAllSettingsValid();
         if (tmpValid)
             return true;
         while (!tmpValid) {
-            try {
-                URL resource = getClass().getResource("/de/vrauchhaupt/chatbotfx/view/SettingsWindow.fxml");
-                FXMLLoader loader = new FXMLLoader(resource);
-                Parent settingsMainNode = loader.load();
-                SettingsWindow settingsWindow = loader.getController();
-
-                // Create a new stage for the dialog
-                Stage dialogStage = new Stage();
-                settingsWindow.setOnSaveClicked(x ->
-                {
-                    if (!settingsWindow.isValid())
-                        return;
-                    settingsWindow.persist();
-                    dialogStage.close();
-                });
-                dialogStage.setTitle("Settings");
-                dialogStage.initModality(Modality.WINDOW_MODAL);
-                dialogStage.initOwner(ChatBot.mainStage);
-                dialogStage.setScene(new Scene(settingsMainNode));
-                dialogStage.showAndWait();
-                tmpValid = checkAllSettingsValid();
-
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (!showSettingsWindow())
                 return false;
-            }
+            tmpValid = checkAllSettingsValid();
         }
         loadFromConfigFile();
         LlmModelCardManager.instance().reloadModelCards();
+        return true;
+    }
+
+    public boolean showSettingsWindow() {
+        try {
+            URL resource = getClass().getResource("/de/vrauchhaupt/chatbotfx/view/SettingsWindow.fxml");
+            FXMLLoader loader = new FXMLLoader(resource);
+            Parent settingsMainNode = loader.load();
+            SettingsWindow settingsWindow = loader.getController();
+
+            // Create a new stage for the dialog
+            Stage dialogStage = new Stage();
+            settingsWindow.setOnSaveClicked(x ->
+            {
+                if (!settingsWindow.isValid())
+                    return;
+                settingsWindow.persist();
+                dialogStage.close();
+            });
+            dialogStage.setTitle("Settings");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(ChatBot.mainStage);
+            dialogStage.setScene(new Scene(settingsMainNode));
+            dialogStage.showAndWait();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
         return true;
     }
 }

@@ -12,7 +12,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
-import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -99,7 +98,7 @@ public class StableDiffusionManager extends AbstractManager {
             String payloadString = payload.toString();
 
             String webuiForgeHost = SettingsManager.instance().getWebuiForgeHost();
-            if ( !webuiForgeHost.endsWith("/"))
+            if (!webuiForgeHost.endsWith("/"))
                 webuiForgeHost = webuiForgeHost + "/";
             webuiForgeHost = webuiForgeHost + "sdapi/v1/txt2img";
             URI restUrl = URI.create(webuiForgeHost);
@@ -132,6 +131,13 @@ public class StableDiffusionManager extends AbstractManager {
                 try (ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes)) {
                     imageConsumer.addImage(index, imageBytes, imageFile);
                 }
+                // unload model
+                String unloadUrl =  webuiForgeHost + "sdapi/v1/unload";
+                request = HttpRequest.newBuilder()
+                        .uri(URI.create(unloadUrl))
+                        .POST(HttpRequest.BodyPublishers.noBody()) // No body needed
+                        .build();
+                response = client.send(request, HttpResponse.BodyHandlers.ofString());
             } else {
                 throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + response.body() + " - URL was ");
             }
