@@ -121,24 +121,25 @@ public class OllamaManager extends AbstractManager {
             return;
         if (!Files.isRegularFile(llmModelFileForModelCard.getValue()))
             return;
+        System.out.println("Loading LLM model " +llmModelCard.getLlmModel());
 
         Path modelFile = llmModelFileForModelCard.getValue().getParent().resolve(llmModelFileForModelCard.getKey() + "_" + llmModelCard.getModelCardName() + "_ModelFile.txt");
         try (FileWriter fw = new FileWriter(modelFile.toFile())) {
             fw.write("FROM \"" + llmModelFileForModelCard.getValue().toAbsolutePath() + "\"\n");
-            fw.write("PARAMETER temperature " + llmModelCard.getTemperature() + "\n");
-            fw.write("PARAMETER top_p " + llmModelCard.getTop_p() + "\n");
-            fw.write("PARAMETER top_k " + llmModelCard.getTop_k() + "\n");
-            fw.write("PARAMETER stop \"<|start_header_id|>\"\n");
-            fw.write("PARAMETER stop \"<|end_header_id|>\"\n");
-            fw.write("PARAMETER stop \"<|eot_id|>\"\n");
-            fw.write("PARAMETER stop \"<|reserved_special_token\"\n");
-            fw.write("TEMPLATE \"\"\"{{ if .System }}<|start_header_id|>system<|end_header_id|>\n");
+            //fw.write("PARAMETER temperature " + llmModelCard.getTemperature() + "\n");
+            //fw.write("PARAMETER top_p " + llmModelCard.getTop_p() + "\n");
+            //fw.write("PARAMETER top_k " + llmModelCard.getTop_k() + "\n");
+            //fw.write("PARAMETER stop \"<|start_header_id|>\"\n");
+            //fw.write("PARAMETER stop \"<|end_header_id|>\"\n");
+            //fw.write("PARAMETER stop \"<|eot_id|>\"\n");
+            //fw.write("PARAMETER stop \"<|reserved_special_token\"\n");
+            /*fw.write("TEMPLATE \"\"\"{{ if .System }}<|start_header_id|>system<|end_header_id|>\n");
             fw.write("\n");
             fw.write("{{ .System }}<|eot_id|>{{ end }}{{ if .Prompt }}<|start_header_id|>user<|end_header_id|>\n");
             fw.write("\n");
             fw.write("{{ .Prompt }}<|eot_id|>{{ end }}<|start_header_id|>assistant<|end_header_id|>\n");
             fw.write("\n");
-            fw.write("{{ .Response }}<|eot_id|>\"\"\"\n");
+            fw.write("{{ .Response }}<|eot_id|>\"\"\"\n");*/
             //fw.write("SYSTEM " + llmModelCard.getSystem() + "\n");
         } catch (IOException e) {
             throw new RuntimeException("Could not write modelfile for llm model at '" + modelFile.toAbsolutePath() + "'", e);
