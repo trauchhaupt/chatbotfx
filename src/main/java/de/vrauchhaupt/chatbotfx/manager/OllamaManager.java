@@ -71,22 +71,23 @@ public class OllamaManager extends AbstractManager {
     }
 
     public List<OllamaChatMessage> systemNoticeAndAsk(String systemNotice, String message,
-                                                      List<OllamaChatMessage> messages, String model, ChatbotLlmStreamHandler streamHandler) {
+                                                      List<OllamaChatMessage> messages, LlmModelCardJson model, ChatbotLlmStreamHandler streamHandler) {
 
         Options options = new OptionsBuilder()
-                .setTemperature(1.1f)
-                .setTopP(0.7f)
-                .setTopK(50)
-                .setRepeatPenalty(1.3f)
+                .setTemperature(model.getTemperature())
+                .setTopP(model.getTop_p())
+                .setTopK(model.getTop_k())
+                .setRepeatPenalty(1.7f)
                 .build();
 
-        OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model);
+        OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model.getLlmModel());
         OllamaChatRequestBuilder ollamaChatRequestBuilder = builder.withMessages(messages)
                 .withOptions(options);
         if (systemNotice != null && !systemNotice.trim().isEmpty()) {
             Path modelCardsDirectory = SettingsManager.instance().getPathToLlmModelCards();
             Path path = modelCardsDirectory.resolve(LlmModelCardManager.instance().getSelectedLlModelCard().getModelCardName() + ".png");
-            if (Files.exists(path)) {
+            if (Files.exists(path) && messages.size() == 0) {
+                System.out.println("Attaching image '" + path + "' to LLM message.");
                 ollamaChatRequestBuilder = ollamaChatRequestBuilder
                         .withMessage(OllamaChatMessageRole.SYSTEM, systemNotice, List.of(path.toFile()));
             } else {
@@ -94,6 +95,7 @@ public class OllamaManager extends AbstractManager {
                         .withMessage(OllamaChatMessageRole.SYSTEM, systemNotice);
             }
         }
+
         if (message != null && !message.trim().isEmpty()) {
             ollamaChatRequestBuilder = ollamaChatRequestBuilder
                     .withMessage(OllamaChatMessageRole.USER, message);

@@ -38,7 +38,7 @@ public class SettingsManager extends AbstractManager {
     private final SimpleStringProperty selectedLlmModelCard = new SimpleStringProperty();
     private final SimpleStringProperty ollamaHost = new SimpleStringProperty(DEFAULT_OLLAMA_HOST);
     private final SimpleStringProperty webuiForgeHost = new SimpleStringProperty(DEFAULT_WEBUI_FORGE_HOST);
-    private final SimpleBooleanProperty text2ImageGeneration = new SimpleBooleanProperty(true);
+    private final SimpleBooleanProperty text2ImageGeneration = new SimpleBooleanProperty(false);
     private final SimpleBooleanProperty ttsGeneration = new SimpleBooleanProperty(true);
 
     private boolean isLoadingInProgress = false;

@@ -19,7 +19,7 @@ import java.util.List;
 
 public class ChatViewModel implements IMessaging {
 
-    private static final int MAX_RECENT_MESSAGES_TO_SEND = 20;
+    private static final int MAX_RECENT_MESSAGES_TO_SEND = 50;
     private static ChatViewModel INSTANCE = null;
 
     private final ChatbotLlmStreamHandler streamHandler = new ChatbotLlmStreamHandler();
@@ -74,14 +74,14 @@ public class ChatViewModel implements IMessaging {
                     selectedLlModelCard.getSystem(),
                     userPrompt,
                     trimmedHistory(),
-                    selectedLlModelCard.getLlmModel(),
+                    selectedLlModelCard,
                     streamHandler));
         else
             append(OllamaManager.instance().systemNoticeAndAsk(
                     systemPrompt,
                     userPrompt,
                     trimmedHistory(),
-                    selectedLlModelCard.getLlmModel(),
+                    selectedLlModelCard,
                     streamHandler));
 
     }

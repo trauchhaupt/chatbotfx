@@ -17,8 +17,7 @@
                 </Menu>
                 <Menu text="AI Features">
                     <CheckMenuItem fx:id="menuItemTts" text="Text to Speech (TTS)" />
-                    <CheckMenuItem fx:id="menuItemTxt2Img" text="Text to Image (T2I)" />
-
+                    <CheckMenuItem fx:id="menuItemTxt2Img" text="Auto Text to Image (T2I)" />
                 </Menu>
             </MenuBar>
             <HBox alignment="BASELINE_LEFT" spacing="5" maxWidth="Infinity">

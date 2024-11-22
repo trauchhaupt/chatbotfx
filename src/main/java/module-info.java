@@ -10,6 +10,7 @@ module chatbotfx {
     requires com.fasterxml.jackson.annotation;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
+    requires org.jsoup;
 
     exports de.vrauchhaupt.chatbotfx to javafx.controls,javafx.graphics, javafx.fxml;
     exports de.vrauchhaupt.chatbotfx.view to javafx.controls,javafx.graphics, javafx.fxml;

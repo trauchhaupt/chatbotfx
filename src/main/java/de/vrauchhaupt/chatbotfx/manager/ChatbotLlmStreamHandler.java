@@ -2,6 +2,7 @@ package de.vrauchhaupt.chatbotfx.manager;
 
 import de.vrauchhaupt.chatbotfx.model.TtsSentence;
 import io.github.ollama4j.models.generate.OllamaStreamHandler;
+import org.jsoup.Jsoup;
 
 import java.util.List;
 
@@ -25,10 +26,13 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler {
     }
 
     private static String cleanWith(String aString, boolean wholeSentence) {
-        String returnValue = aString.replaceAll("\r?\n|\r", "");
-        returnValue = returnValue.replace("<br>", "");
+        String returnValue = Jsoup.parse(aString).text();
+        returnValue = aString.replaceAll("\r?\n|\r", "");
         returnValue = returnValue.replaceAll("<[^>]*>", " ");
         returnValue = returnValue.replaceAll("<[^>]*}", " ");
+        returnValue = returnValue.replaceAll("[^\\x00-\\x7F]", "");
+        returnValue = returnValue.replaceAll("[<>|]", "");
+        returnValue = returnValue.replace("E &#xDBC;&##R; = .'", "");
         /*if (wholeSentence)
             System.out.println("Cleaning  \n'" + aString + "'\nto\n'" + returnValue + "'");*/
         return returnValue;
