@@ -27,7 +27,7 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler {
 
     private static String cleanWith(String aString, boolean wholeSentence) {
         String returnValue = Jsoup.parse(aString).text();
-        returnValue = aString.replaceAll("\r?\n|\r", "");
+        returnValue = returnValue.replaceAll("\r?\n|\r", "");
         returnValue = returnValue.replaceAll("<[^>]*>", " ");
         returnValue = returnValue.replaceAll("<[^>]*}", " ");
         returnValue = returnValue.replaceAll("[^\\x00-\\x7F]", "");
