@@ -12,20 +12,26 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler {
             ".", ";", "!", "?",
             "!\"", ".\"", "?\"",
             "<br>", "*");
-    private String lastMessage = "";
     private String lastSentences = "";
+    private int chatMessageIndex;
 
-    private static void appendAnswer(String curSentence) {
+
+    public ChatbotLlmStreamHandler setChatMessageIndex(int chatMessageIndex) {
+        this.chatMessageIndex = chatMessageIndex;
+        return this;
+    }
+
+    private void appendAnswer(String curSentence ) {
         if (curSentence == null || curSentence.trim().equals(""))
             return;
         System.out.println("Original sentence '" + curSentence + "'");
-        curSentence = cleanWith(curSentence, true).trim();
-        TtsSentence ttsSentence = new TtsSentence(curSentence);
+        curSentence = cleanWith(curSentence).trim();
+        TtsSentence ttsSentence = new TtsSentence(curSentence, chatMessageIndex);
         PrintingManager.instance().addToPrintingQueue(ttsSentence);
         PiperManager.instance().fileSentence(ttsSentence);
     }
 
-    private static String cleanWith(String aString, boolean wholeSentence) {
+    private String cleanWith(String aString) {
         String returnValue = Jsoup.parse(aString).text();
         returnValue = returnValue.replaceAll("\r?\n|\r", "");
         returnValue = returnValue.replaceAll("<[^>]*>", " ");
@@ -55,11 +61,9 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler {
             appendAnswer(curSentence);
             lastSentences = message;
         }
-        lastMessage = message;
     }
 
     public void inputHasStopped() {
-        lastMessage = "";
         lastSentences = "";
     }
 }

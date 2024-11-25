@@ -44,8 +44,22 @@ public class ThreadManager extends AbstractManager implements Thread.UncaughtExc
         errors.add(new ErrorDto(e.getMessage(), e));
     }
 
-    public Thread startThread(String threadName, Runnable runnable) {
-        Thread returnValue = new Thread(runnable);
+    public Thread startThread(String threadName, Runnable runnable, Consumer<Thread> onThreadFinished) {
+        System.out.println("Starting worker thread '" + threadName + "'");
+        final Thread returnValue = new Thread(() -> {
+            try {
+                runnable.run();
+            } catch (Exception e) {
+                if (e instanceof InterruptedException)
+                    System.out.println("Interruppted thread " + threadName);
+                else
+                    this.uncaughtException(Thread.currentThread(), e);
+            } finally {
+                if (onThreadFinished != null)
+                    onThreadFinished.accept(Thread.currentThread());
+                System.out.println("Finished with worker thread '" + threadName + "'");
+            }
+        });
         returnValue.setName(threadName);
         returnValue.setUncaughtExceptionHandler(this);
         returnValue.start();
@@ -53,6 +67,7 @@ public class ThreadManager extends AbstractManager implements Thread.UncaughtExc
     }
 
     public ControlledThread startEndlessThread(String threadName, Consumer<ControlledThread> runnable) {
+        System.out.println("Starting endless thread '" + threadName + "'");
         ControlledThread controlledThread = new ControlledThread(runnable);
         controlledThread.setName(threadName);
         controlledThread.setUncaughtExceptionHandler(ThreadManager.instance());

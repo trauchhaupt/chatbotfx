@@ -1,5 +1,6 @@
 package de.vrauchhaupt.chatbotfx;
 
+import de.vrauchhaupt.chatbotfx.manager.LlmModelCardManager;
 import de.vrauchhaupt.chatbotfx.manager.SettingsManager;
 import de.vrauchhaupt.chatbotfx.manager.ThreadManager;
 import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
@@ -53,7 +54,6 @@ public class ChatBot extends Application {
             FXMLLoader loader = new FXMLLoader(resource);
             mainWindowNode = loader.load();
             chatMainWindow = loader.getController();
-
             Scene scene = new Scene(mainWindowNode, 1200, 1000);
             primaryStage.setScene(scene);
             primaryStage.setTitle("ChatBot");
@@ -63,6 +63,8 @@ public class ChatBot extends Application {
             });
             primaryStage.show();
             SettingsManager.instance().assertAllSettingsValid();
+
+            chatMainWindow.buttonReloadModelsClicked(null);
 
         } catch (Exception e) {
             e.printStackTrace();

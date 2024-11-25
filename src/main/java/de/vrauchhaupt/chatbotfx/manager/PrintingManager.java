@@ -1,5 +1,6 @@
 package de.vrauchhaupt.chatbotfx.manager;
 
+import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.ControlledThread;
 import de.vrauchhaupt.chatbotfx.model.DisplayRole;
 import de.vrauchhaupt.chatbotfx.model.TtsSentence;
@@ -36,18 +37,19 @@ public class PrintingManager extends AbstractManager {
             logLn("Printing PQ '" + ttsSentence.getText() + "'");
             int textwidth = 0;
             boolean firstWord = true;
+            ChatViewModel.instance().appendAssistant ( ttsSentence);
             for (String word : ttsSentence.getWords()) {
                 if (!firstWord) {
-                    out(" ");
+                    out(" ", ttsSentence.getChatMessageIndex());
                 } else {
                     firstWord = false;
                 }
-                out(word);
+                out(word, ttsSentence.getChatMessageIndex());
 
                 textwidth = textwidth + word.length();
                 thread.waitAWhile();
             }
-            nextLine();
+            nextLine(ttsSentence.getChatMessageIndex());
             currentlyPrinting.set(false);
 
             // wait until the sentence was spoken
@@ -61,19 +63,23 @@ public class PrintingManager extends AbstractManager {
     }
 
     @Override
-    public void out(String text) {
+    public void out(String text, int chatMessageIndex) {
         if (printFunction != null)
-            printFunction.render(DisplayRole.ASSISTANT, text);
+            printFunction.render(DisplayRole.ASSISTANT, text, chatMessageIndex);
         else
-            super.out(text);
+            super.out(text, chatMessageIndex);
     }
 
     @Override
-    public void nextLine() {
+    public void nextLine(int chatMessageIndex) {
         if (printFunction != null)
-            printFunction.renderNewLine();
+            printFunction.renderNewLine(chatMessageIndex);
         else
-            super.nextLine();
+            super.nextLine(chatMessageIndex);
+    }
+
+    public void cancelWork() {
+        queueToWrite.clear();
     }
 
     public void setPrintFunction(IPrintFunction printFunction) {

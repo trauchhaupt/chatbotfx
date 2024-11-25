@@ -12,9 +12,11 @@ public class TtsSentence {
     private final ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
     private final AtomicBoolean allBytesCaught = new AtomicBoolean(false);
     private final AtomicBoolean spoken = new AtomicBoolean(false);
+    private final int chatMessageIndex;
 
-    public TtsSentence(String text) {
+    public TtsSentence(String text, int chatMessageIndex) {
         this.text = text;
+        this.chatMessageIndex = chatMessageIndex;
     }
 
     public String getText() {
@@ -46,6 +48,10 @@ public class TtsSentence {
 
     public boolean wasSpoken() {
         return spoken.get();
+    }
+
+    public int getChatMessageIndex() {
+        return chatMessageIndex;
     }
 
     public List<String> getWords() {

@@ -56,6 +56,7 @@ public class SettingsManager extends AbstractManager {
         selectedLlmModelCard.addListener(saveToFileListener);
         ollamaHost.addListener(saveToFileListener);
         webuiForgeHost.addListener(saveToFileListener);
+        selectedLlmModelCard.addListener(((observableValue, oldV, newV) -> System.out.println("Selected model card from " + oldV + " to " + newV)));
     }
 
     public static SettingsManager instance() {
@@ -68,13 +69,16 @@ public class SettingsManager extends AbstractManager {
         if (!Files.exists(SETTINGS_FILE))
             saveToFile();
         SettingsJson tmpSettingsJson = JsonHelper.loadFromFile(SETTINGS_FILE, SettingsJson.class);
-        if (tmpSettingsJson != null)
+        if (tmpSettingsJson != null) {
             fromJsonObject(tmpSettingsJson);
+            LlmModelCardManager.instance().llmModelCardChangedInSettings();
+        }
         logLn("Settings loaded");
     }
 
     private void saveToFile() {
         try {
+            logLn("Saving settings to file");
             objectWriter().writeValue(SETTINGS_FILE.toFile(), toJsonObject());
         } catch (IOException e) {
             throw new RuntimeException("Could not save settings to '" + SETTINGS_FILE.toAbsolutePath() + "'", e);
@@ -203,8 +207,12 @@ public class SettingsManager extends AbstractManager {
         isLoadingInProgress = true;
         try {
             setPathToPiper(settingsJson.getPathToPiper() == null ? null : Paths.get(settingsJson.getPathToPiper()));
+
             setPathToLlmModelFiles(settingsJson.getPathToLlmModelFiles() == null ? null : Paths.get(settingsJson.getPathToLlmModelFiles()));
+            LlmModelCardManager.instance().reloadLlmModelFiles();
             setPathToLlmModelCards(settingsJson.getPathToLlmModelCards() == null ? null : Paths.get(settingsJson.getPathToLlmModelCards()));
+            LlmModelCardManager.instance().reloadModelCards();
+
             setPathToTtsModelFiles(settingsJson.getPathToTtsModelFiles() == null ? null : Paths.get(settingsJson.getPathToTtsModelFiles()));
             setSelectedLlmModelCard(settingsJson.getSelectedLlmModelCard());
             setOllamaHost(settingsJson.getOllamaHost());
@@ -285,5 +293,9 @@ public class SettingsManager extends AbstractManager {
             return false;
         }
         return true;
+    }
+
+    public boolean isLoadingInProgress() {
+        return isLoadingInProgress;
     }
 }

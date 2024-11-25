@@ -26,7 +26,7 @@ public class PiperManager extends AbstractManager {
     private final Queue<TtsSentence> queueOfTextsToProduce = new LinkedList<>();
     private final Queue<TtsSentence> queueOfTextsToPlay = new LinkedList<>();
     private final ObservableList<String> ttsModels = FXCollections.observableArrayList();
-
+    private final List<Thread> currentThreads = new LinkedList<>();
 
     public PiperManager() {
         ThreadManager.instance().startEndlessThread("TTS Generation", this::generateTTS);
@@ -122,6 +122,20 @@ public class PiperManager extends AbstractManager {
         return null;
     }
 
+    public void cancelWork() {
+        queueOfTextsToProduce.clear();
+        queueOfTextsToPlay.clear();
+        for (Thread currentThread : currentThreads) {
+            if (!currentThread.isAlive())
+                continue;
+            try {
+                currentThread.interrupt();
+            } catch (Exception e) {
+                System.err.println("Could not interrupt thread in pipermananger '" + currentThread.getName() + "'");
+                e.printStackTrace();
+            }
+        }
+    }
 
     private void generateTTS(ControlledThread thread) {
         Path piperExe = getPiperExe();
@@ -132,12 +146,11 @@ public class PiperManager extends AbstractManager {
             return;
 
         LlmModelCardJson selectedLlModelCard = LlmModelCardManager.instance().getSelectedLlModelCard();
-        String ttsModel = selectedLlModelCard.getTtsModel();
-
+        final String ttsModel;
         if (selectedLlModelCard == null || !ttsModels.contains(selectedLlModelCard.getTtsModel())) {
             ttsModel = ttsModels.get(0);
-            System.err.println("No model selected, or model has incorrect tts model defined (" + ttsModel + "'. Taking default '" + ttsModel + "'");
-        }
+        } else
+            ttsModel = selectedLlModelCard.getTtsModel();
 
         List<String> command = List.of(piperExe.toAbsolutePath().toString(),
                 "--model", SettingsManager.instance().getPathToTtsModelFiles() + "\\" + ttsModel + ".onnx",
@@ -147,7 +160,9 @@ public class PiperManager extends AbstractManager {
         while (!queueOfTextsToProduce.isEmpty()) {
             TtsSentence ttsSentence = queueOfTextsToProduce.remove();
             queueOfTextsToPlay.add(ttsSentence);
-            ThreadManager.instance().startThread("Piper Execution", () -> startPiperCommand(command, ttsSentence));
+            currentThreads.add(ThreadManager.instance().startThread("Piper Execution",
+                    () -> startPiperCommand(command, ttsSentence),
+                    x -> currentThreads.remove(x)));
         }
     }
 
@@ -157,7 +172,10 @@ public class PiperManager extends AbstractManager {
             processBuilder.directory(SettingsManager.instance().getPathToPiper().toAbsolutePath().toFile());
             Process piperProcess = processBuilder.start();
 
-            Thread voiceCollectorThread = ThreadManager.instance().startThread("Piper voice collector", () -> collectVoices(piperProcess, ttsSentence));
+            Thread voiceCollectorThread = ThreadManager.instance().startThread("Piper voice collector",
+                    () -> collectVoices(piperProcess, ttsSentence),
+                    x -> currentThreads.remove(x));
+            currentThreads.add(voiceCollectorThread);
 
             try (OutputStream outputStream = piperProcess.getOutputStream()) {
                 String withoutAsterix = ttsSentence.getText().replace('*', ' ');
@@ -201,10 +219,9 @@ public class PiperManager extends AbstractManager {
     public boolean isWorking() {
         return !queueOfTextsToPlay.isEmpty() ||
                 !queueOfTextsToProduce.isEmpty() ||
+                !currentThreads.isEmpty() ||
                 isPlayingSound.get();
 
     }
-
-
 }
 

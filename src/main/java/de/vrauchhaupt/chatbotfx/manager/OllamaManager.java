@@ -1,8 +1,13 @@
 package de.vrauchhaupt.chatbotfx.manager;
 
+import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
+import de.vrauchhaupt.chatbotfx.model.IndexedOllamaChatMessage;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import io.github.ollama4j.OllamaAPI;
-import io.github.ollama4j.models.chat.*;
+import io.github.ollama4j.models.chat.OllamaChatMessageRole;
+import io.github.ollama4j.models.chat.OllamaChatRequest;
+import io.github.ollama4j.models.chat.OllamaChatRequestBuilder;
+import io.github.ollama4j.models.chat.OllamaChatResult;
 import io.github.ollama4j.models.response.Model;
 import io.github.ollama4j.utils.Options;
 import io.github.ollama4j.utils.OptionsBuilder;
@@ -17,6 +22,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class OllamaManager extends AbstractManager {
 
@@ -24,6 +31,8 @@ public class OllamaManager extends AbstractManager {
     private static final boolean VERBOSE = false;
     private static OllamaManager INSTANCE;
     private final BooleanProperty working = new SimpleBooleanProperty(false);
+    private Thread currentLoadingThread = null;
+    private Thread currentAskingThread = null;
 
     private OllamaManager() {
 
@@ -44,10 +53,10 @@ public class OllamaManager extends AbstractManager {
 
     public final boolean checkOllamaServerRunning() {
         try {
-            listModels();
+            newOllamaApi().listModels();
             return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            logLn("Ollama is not obviously not running, because of " + e.getMessage());
             return false;
         }
     }
@@ -59,7 +68,8 @@ public class OllamaManager extends AbstractManager {
             working.set(true);
             models = newOllamaApi().listModels();
         } catch (Exception e) {
-            throw new RuntimeException("Could not list models from ollama server", e);
+            logLn("Could not list models from ollama server", e);
+            models = new ArrayList<>();
         } finally {
             working.set(false);
         }
@@ -70,8 +80,17 @@ public class OllamaManager extends AbstractManager {
         return models;
     }
 
-    public List<OllamaChatMessage> systemNoticeAndAsk(String systemNotice, String message,
-                                                      List<OllamaChatMessage> messages, LlmModelCardJson model, ChatbotLlmStreamHandler streamHandler) {
+    public void systemNoticeAndAsk(String systemNotice,
+                                   String message,
+                                   List<IndexedOllamaChatMessage> messages,
+                                   LlmModelCardJson model,
+                                   ChatbotLlmStreamHandler streamHandler,
+                                   Runnable onAskingFailure) {
+
+        if (currentAskingThread != null) {
+            logLn("Asking currently in action");
+            onAskingFailure.run();
+        }
 
         Options options = new OptionsBuilder()
                 .setTemperature(model.getTemperature())
@@ -81,13 +100,16 @@ public class OllamaManager extends AbstractManager {
                 .build();
 
         OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model.getLlmModel());
-        OllamaChatRequestBuilder ollamaChatRequestBuilder = builder.withMessages(messages)
+        OllamaChatRequestBuilder ollamaChatRequestBuilder = builder.withMessages(messages.stream()
+                        .map(IndexedOllamaChatMessage::getChatMessage)
+                        .collect(Collectors.toList()))
                 .withOptions(options);
         if (systemNotice != null && !systemNotice.trim().isEmpty()) {
+            ChatViewModel.instance().appendSystemOrPrompt(OllamaChatMessageRole.SYSTEM, systemNotice);
             Path modelCardsDirectory = SettingsManager.instance().getPathToLlmModelCards();
             Path path = modelCardsDirectory.resolve(LlmModelCardManager.instance().getSelectedLlModelCard().getModelCardName() + ".png");
-            if (Files.exists(path) && messages.size() == 0) {
-                System.out.println("Attaching image '" + path + "' to LLM message.");
+            if (Files.exists(path) && messages.isEmpty()) {
+                logLn("Attaching image '" + path + "' to LLM message.");
                 ollamaChatRequestBuilder = ollamaChatRequestBuilder
                         .withMessage(OllamaChatMessageRole.SYSTEM, systemNotice, List.of(path.toFile()));
             } else {
@@ -97,67 +119,102 @@ public class OllamaManager extends AbstractManager {
         }
 
         if (message != null && !message.trim().isEmpty()) {
+            ChatViewModel.instance().appendSystemOrPrompt(OllamaChatMessageRole.USER, systemNotice);
             ollamaChatRequestBuilder = ollamaChatRequestBuilder
                     .withMessage(OllamaChatMessageRole.USER, message);
         }
         OllamaChatRequest ollamaChatRequestModel = ollamaChatRequestBuilder.build();
-        try {
-            working.set(true);
-            OllamaChatResult chat = newOllamaApi().chat(ollamaChatRequestModel, streamHandler);
-            chat.getResponse();
-            streamHandler.inputHasStopped();
-            return chat.getChatHistory();
-        } catch (Exception e) {
-            throw new RuntimeException("Could not ask '" + message + "' on model '" + model + "'", e);
-        } finally {
-            working.set(false);
-        }
+        working.set(true);
+        int newChatMessageId = IndexedOllamaChatMessage.newId();
+        streamHandler.setChatMessageIndex(newChatMessageId);
+        currentAskingThread = ThreadManager.instance().startThread("Asking Ollama Thread", () -> {
+                    try {
+                        OllamaChatResult chat = newOllamaApi().chat(ollamaChatRequestModel, streamHandler);
+                        chat.getResponse();
+                        streamHandler.inputHasStopped();
+                    } catch (InterruptedException e) {
+                        logLn("Stopping asking a message");
+                    } catch (Exception e) {
+                        onAskingFailure.run();
+                        logLn("Could not ask '" + message + "' on model '" + model + "'", e);
+                    } finally {
+                        working.set(false);
+                    }
+                },
+                x -> currentAskingThread = null);
     }
 
-    public void loadModel(
-            LlmModelCardJson llmModelCard,
-            Map.Entry<String, Path> llmModelFileForModelCard) {
-        if (llmModelFileForModelCard == null || llmModelFileForModelCard.getKey() == null || llmModelFileForModelCard.getValue() == null)
+    public void loadModel(LlmModelCardJson llmModelCard,
+                          Map.Entry<String, Path> llmModelFileForModelCard,
+                          Consumer<LlmModelCardJson> llmModelCardWasLoaded,
+                          Runnable llmModelCouldNotBeLoaded) {
+        if (llmModelFileForModelCard == null || llmModelFileForModelCard.getKey() == null || llmModelFileForModelCard.getValue() == null) {
+            logLn("Model card is null somewhere");
+            llmModelCouldNotBeLoaded.run();
             return;
-        if (!Files.isRegularFile(llmModelFileForModelCard.getValue()))
-            return;
-        System.out.println("Loading LLM model " +llmModelCard.getLlmModel());
+        }
 
+        if (!Files.isRegularFile(llmModelFileForModelCard.getValue())) {
+            logLn("Could not write modelfile for llm model at '" + llmModelFileForModelCard.getValue() + "'");
+            llmModelCouldNotBeLoaded.run();
+            return;
+        }
+        if (currentLoadingThread != null) {
+            logLn("Loading already in progress");
+            llmModelCouldNotBeLoaded.run();
+            return;
+        }
+
+        System.out.println("Loading LLM model " + llmModelCard.getLlmModel());
         Path modelFile = llmModelFileForModelCard.getValue().getParent().resolve(llmModelFileForModelCard.getKey() + "_" + llmModelCard.getModelCardName() + "_ModelFile.txt");
         try (FileWriter fw = new FileWriter(modelFile.toFile())) {
             fw.write("FROM \"" + llmModelFileForModelCard.getValue().toAbsolutePath() + "\"\n");
-            //fw.write("PARAMETER temperature " + llmModelCard.getTemperature() + "\n");
-            //fw.write("PARAMETER top_p " + llmModelCard.getTop_p() + "\n");
-            //fw.write("PARAMETER top_k " + llmModelCard.getTop_k() + "\n");
-            //fw.write("PARAMETER stop \"<|start_header_id|>\"\n");
-            //fw.write("PARAMETER stop \"<|end_header_id|>\"\n");
-            //fw.write("PARAMETER stop \"<|eot_id|>\"\n");
-            //fw.write("PARAMETER stop \"<|reserved_special_token\"\n");
-            /*fw.write("TEMPLATE \"\"\"{{ if .System }}<|start_header_id|>system<|end_header_id|>\n");
-            fw.write("\n");
-            fw.write("{{ .System }}<|eot_id|>{{ end }}{{ if .Prompt }}<|start_header_id|>user<|end_header_id|>\n");
-            fw.write("\n");
-            fw.write("{{ .Prompt }}<|eot_id|>{{ end }}<|start_header_id|>assistant<|end_header_id|>\n");
-            fw.write("\n");
-            fw.write("{{ .Response }}<|eot_id|>\"\"\"\n");*/
-            //fw.write("SYSTEM " + llmModelCard.getSystem() + "\n");
         } catch (IOException e) {
-            throw new RuntimeException("Could not write modelfile for llm model at '" + modelFile.toAbsolutePath() + "'", e);
+
+            logLn("Could not write modelfile for llm model at '" + modelFile.toAbsolutePath() + "'", e);
+            llmModelCouldNotBeLoaded.run();
+            return;
         }
 
         try {
             working.set(true);
-            newOllamaApi().createModelWithFilePath(llmModelFileForModelCard.getKey(),
-                    modelFile.toAbsolutePath().toString());
+            currentLoadingThread = ThreadManager.instance().startThread("Loading OllamaApi", () -> {
+                        try {
+                            newOllamaApi().createModelWithFilePath(llmModelFileForModelCard.getKey(),
+                                    modelFile.toAbsolutePath().toString());
+                            llmModelCardWasLoaded.accept(llmModelCard);
+                        } catch (Exception e) {
+                            logLn("Could not load model", e);
+                            llmModelCouldNotBeLoaded.run();
+                        } finally {
+                            working.set(false);
+                        }
+                    },
+                    x -> currentLoadingThread = null);
         } catch (Exception e) {
-            throw new RuntimeException("Could not create model by model file '" + modelFile + "'", e);
-        } finally {
-            working.set(false);
+            logLn("Could not create model by model file '" + modelFile + "'", e);
         }
     }
 
     @Override
     public boolean isWorking() {
-        return working.get();
+        return working.get() || currentAskingThread != null || currentLoadingThread != null;
+    }
+
+    public void cancelWork() {
+        if (currentLoadingThread != null) {
+            try {
+                currentLoadingThread.interrupt();
+            } catch (Exception e) {
+                logLn("Could not interrupt loading thread", e);
+            }
+        }
+        if (currentAskingThread != null) {
+            try {
+                currentAskingThread.interrupt();
+            } catch (Exception e) {
+                logLn("Could not interrupt loading asking", e);
+            }
+        }
     }
 }

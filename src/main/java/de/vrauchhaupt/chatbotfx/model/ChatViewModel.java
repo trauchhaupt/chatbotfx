@@ -23,7 +23,7 @@ public class ChatViewModel implements IMessaging {
     private static ChatViewModel INSTANCE = null;
 
     private final ChatbotLlmStreamHandler streamHandler = new ChatbotLlmStreamHandler();
-    private final ObservableList<OllamaChatMessage> messages = FXCollections.observableArrayList();
+    private final ObservableList<IndexedOllamaChatMessage> messages = FXCollections.observableArrayList();
     private int curImageIndex = 1;
 
     private ChatViewModel() {
@@ -41,17 +41,19 @@ public class ChatViewModel implements IMessaging {
         resetCurImageIndex();
     }
 
-    public List<OllamaChatMessage> getFullHistory() {
-        return messages;
+    public List<IndexedOllamaChatMessage> getFullHistory() {
+        return new ArrayList<>(messages);
     }
 
-    public List<OllamaChatMessage> trimmedHistory() {
-        List<OllamaChatMessage> returnValue = new ArrayList<>();
+    public List<IndexedOllamaChatMessage> trimmedHistory() {
+        List<IndexedOllamaChatMessage> returnValue = new ArrayList<>();
+        if (messages.isEmpty())
+            return returnValue;
         if (messages.size() <= MAX_RECENT_MESSAGES_TO_SEND + 1)
             returnValue.addAll(messages);
         else {
-            OllamaChatMessage firstMessage = messages.getFirst(); // if it is a system (what should be, this is important)
-            if (firstMessage.getRole().equals(OllamaChatMessageRole.SYSTEM)) {
+            IndexedOllamaChatMessage firstMessage = messages.getFirst(); // if it is a system (what should be, this is important)
+            if (firstMessage.getChatMessage().getRole().equals(OllamaChatMessageRole.SYSTEM)) {
                 returnValue.add(firstMessage);
             }
             returnValue.addAll(messages.subList(Math.max(0, messages.size() - MAX_RECENT_MESSAGES_TO_SEND), messages.size()));
@@ -59,30 +61,25 @@ public class ChatViewModel implements IMessaging {
         return returnValue;
     }
 
-    private void append(List<OllamaChatMessage> allNewMessages) {
-        List<OllamaChatMessage> newMessages = allNewMessages.stream()
-                .filter(x -> messages.stream().noneMatch(y -> y.getContent().equals(x.getContent())))
-                .toList();
-        messages.addAll(newMessages);
-    }
-
     public void ask(String systemPrompt, String userPrompt) {
 
         LlmModelCardJson selectedLlModelCard = LlmModelCardManager.instance().getSelectedLlModelCard();
         if (trimmedHistory().isEmpty())
-            append(OllamaManager.instance().systemNoticeAndAsk(
+            OllamaManager.instance().systemNoticeAndAsk(
                     selectedLlModelCard.getSystem(),
                     userPrompt,
                     trimmedHistory(),
                     selectedLlModelCard,
-                    streamHandler));
+                    streamHandler,
+                    () -> logLn("Could not ask LLM '" + userPrompt + "'"));
         else
-            append(OllamaManager.instance().systemNoticeAndAsk(
+            OllamaManager.instance().systemNoticeAndAsk(
                     systemPrompt,
                     userPrompt,
                     trimmedHistory(),
                     selectedLlModelCard,
-                    streamHandler));
+                    streamHandler,
+                    () -> logLn("Could not ask LLM '" + userPrompt + "'"));
 
     }
 
@@ -96,7 +93,9 @@ public class ChatViewModel implements IMessaging {
             Path messageJsonFile = dirToSave.resolve(selectedLlModelCard.getModelCardName() + ".messages");
             Files.deleteIfExists(messageJsonFile);
             MessageContainerJson valueToWrite = new MessageContainerJson();
-            valueToWrite.setMessages(new ArrayList<>(messages));
+            valueToWrite.setMessages(messages.stream()
+                    .map(IndexedOllamaChatMessage::getChatMessage)
+                    .toList());
             JsonHelper.objectWriter().writeValue(messageJsonFile.toFile(), valueToWrite);
             // delete old saved files
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(dirToSave, selectedLlModelCard.getModelCardName() + "_*.jpg")) {
@@ -148,11 +147,13 @@ public class ChatViewModel implements IMessaging {
         if (ollamaChatMessages == null)
             messages.clear();
         else
-            messages.setAll(ollamaChatMessages.getMessages());
+            messages.setAll(ollamaChatMessages.getMessages().stream()
+                    .map(x -> new IndexedOllamaChatMessage(x))
+                    .toList());
         deleteExistingRuntimeImages();
 
-        for (OllamaChatMessage ollamaChatMessage : getFullHistory()) {
-            printer.render(DisplayRole.of(ollamaChatMessage.getRole()), ollamaChatMessage.getContent());
+        for (IndexedOllamaChatMessage ollamaChatMessage : messages) {
+            printer.render(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()), ollamaChatMessage.getChatMessage().getContent(), ollamaChatMessage.getId());
         }
 
         List<Path> filesToCopy = new ArrayList<>();
@@ -185,5 +186,32 @@ public class ChatViewModel implements IMessaging {
 
     public void increaseCurImageIndex() {
         curImageIndex++;
+    }
+
+    public void setMessageOfId(int chatMessageIndex, String newMessage) {
+        messages.stream().filter(x -> x.getId() == chatMessageIndex)
+                .forEach(x -> x.getChatMessage().setContent(newMessage));
+    }
+
+    public void appendSystemOrPrompt(OllamaChatMessageRole role, String prompt) {
+        OllamaChatMessage ollamaChatMessage = new OllamaChatMessage();
+        ollamaChatMessage.setRole(role);
+        ollamaChatMessage.setContent(prompt);
+        messages.add(new IndexedOllamaChatMessage(ollamaChatMessage));
+    }
+
+    public void appendAssistant(TtsSentence ttsSentence) {
+        IndexedOllamaChatMessage indexedOllamaChatMessage = messages.stream().filter(x -> x.getId() == ttsSentence.getChatMessageIndex())
+                .findFirst().orElse(null);
+        if (indexedOllamaChatMessage == null) {
+            OllamaChatMessage ollamaChatMessage = new OllamaChatMessage();
+            ollamaChatMessage.setRole(OllamaChatMessageRole.ASSISTANT);
+            ollamaChatMessage.setContent(ttsSentence.getText());
+            messages.add(new IndexedOllamaChatMessage(ttsSentence.getChatMessageIndex(), ollamaChatMessage));
+        } else {
+            indexedOllamaChatMessage.getChatMessage().setContent(
+                    indexedOllamaChatMessage.getChatMessage().getContent() + " " + ttsSentence.getText()
+            );
+        }
     }
 }

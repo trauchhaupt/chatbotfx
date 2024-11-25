@@ -42,24 +42,30 @@ public class LlmModelCardManager extends AbstractManager {
             usedLlmModel.set(null);
         } else {
             Model llmModelForModelCard = findLlmModelForModelCard(newValue);
-            if (llmModelForModelCard != null)
+            if (llmModelForModelCard != null) {
                 usedLlmModel.set(llmModelForModelCard);
-            else {
+                SettingsManager.instance().setSelectedLlmModelCard(newValue.getModelCardName());
+            } else {
                 Map.Entry<String, Path> llmModelFileForModelCard = findLlmModelFileForModelCard(newValue);
-                OllamaManager.instance().loadModel(newValue, llmModelFileForModelCard);
-                availableLlmOllamaModels = null;
-                llmModelForModelCard = findLlmModelForModelCard(newValue);
-                if (llmModelFileForModelCard == null) {
-                    throw new RuntimeException("Could not load llm model '" + newValue.getLlmModel() + "' in ollama");
-                }
-                usedLlmModel.set(llmModelForModelCard);
-            }
+                OllamaManager.instance().loadModel(newValue, llmModelFileForModelCard, x -> {
+                            availableLlmOllamaModels = null;
+                            Model tmpLlmModelForModelCard = findLlmModelForModelCard(newValue);
+                            if (tmpLlmModelForModelCard == null) {
+                                logLn("Could not load llm model '" + newValue.getLlmModel() + "' in ollama");
+                            } else {
+                                usedLlmModel.set(llmModelForModelCard);
+                                SettingsManager.instance().setSelectedLlmModelCard(newValue.getModelCardName());
+                            }
+                        },
+                        () -> logLn("Failed to load model " + newValue.getLlmModel()));
 
-            SettingsManager.instance().setSelectedLlmModelCard(newValue.getModelCardName());
+            }
         }
     }
 
-    private void llmModelCardChangedInSettings() {
+    public void llmModelCardChangedInSettings() {
+        if (SettingsManager.instance().isLoadingInProgress())
+            return;
         String selectedModelCardName = SettingsManager.instance().getSelectedLlmModelCard();
         if (selectedModelCardName == null) {
             selectedLlModelCard.set(null);
@@ -92,7 +98,7 @@ public class LlmModelCardManager extends AbstractManager {
             logLn("-------------------");
             try (Stream<Path> dirListing = Files.list(pathToModelCards)) {
                 availableLlmModelFiles = new HashMap<>();
-                dirListing.forEach(this::addToModelFileIndex);
+                dirListing.forEach(x -> addToModelFileIndex(availableLlmModelFiles, x));
 
             } catch (IOException e) {
                 throw new RuntimeException("Could not load model cards from '" + pathToModelCards.toAbsolutePath() + "'", e);
@@ -118,7 +124,7 @@ public class LlmModelCardManager extends AbstractManager {
         return usedLlmModel;
     }
 
-    private void addToModelFileIndex(Path path) {
+    private void addToModelFileIndex(Map<String, Path> index, Path path) {
         if (path == null)
             return;
         if (!Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS))
@@ -127,7 +133,7 @@ public class LlmModelCardManager extends AbstractManager {
             return;
         String fileName = path.getFileName().toString();
         String modelName = fileName.substring(0, fileName.length() - 5);
-        availableLlmModelFiles.put(modelName, path);
+        index.put(modelName, path);
     }
 
     public List<LlmModelCardJson> getAvailableModelCards() {
@@ -229,11 +235,16 @@ public class LlmModelCardManager extends AbstractManager {
         return getAvailableModelCards();
     }
 
+    public Map<String, Path> reloadLlmModelFiles() {
+        availableLlmModelFiles = null;
+        return getAvailableLlmModelFiles();
+    }
+
     public boolean checkIfModelCardsExist() {
-        return !availableModelCards.isEmpty();
+        return availableModelCards != null && !availableModelCards.isEmpty();
     }
 
     public boolean checkIfLlmModelFilesExist() {
-        return !availableLlmModelFiles.isEmpty();
+        return availableLlmModelFiles != null && !availableLlmModelFiles.isEmpty();
     }
 }

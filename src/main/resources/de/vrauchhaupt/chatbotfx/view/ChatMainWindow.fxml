@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.Group?>
 <?import javafx.scene.layout.*?>
+<?import de.vrauchhaupt.chatbotfx.view.ChatContainer?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="de.vrauchhaupt.chatbotfx.view.ChatMainWindow"
@@ -35,12 +36,8 @@
     <center>
         <ScrollPane fx:id="scrollPaneChat" fitToWidth="true" vbarPolicy="ALWAYS">
             <VBox>
-                <VBox fx:id="containerChat" fillWidth="true" spacing="3">
-                    <padding>
-                        <Insets top="5" left="5" right="5" bottom="15"/>
-                    </padding>
-                </VBox>
-                <StackPane fx:id="paneLoadBlocker" mouseTransparent="true" disable="true">
+                <ChatContainer fx:id="containerChat" />
+                <StackPane fx:id="paneLoadBlocker" mouseTransparent="true" disable="true" visible="false">
                     <Group fx:id="groupLoadingAnimation" mouseTransparent="true" disable="true"/>
                 </StackPane>
             </VBox>
@@ -73,7 +70,9 @@
             <TextField fx:id="textFieldUserInput" maxWidth="Infinity" HBox.hgrow="ALWAYS" GridPane.columnIndex="1"
                        GridPane.rowIndex="1" GridPane.fillWidth="true"/>
             <Button fx:id="buttonSend" text="Send" defaultButton="true" GridPane.columnIndex="2"
-                    GridPane.rowIndex="0" GridPane.rowSpan="2" GridPane.valignment="CENTER"/>
+                    GridPane.rowIndex="0" GridPane.valignment="CENTER" maxWidth="Infinity"/>
+            <Button fx:id="buttonCancel" text="Cancel" GridPane.columnIndex="2"
+                    GridPane.rowIndex="1" GridPane.valignment="CENTER" maxWidth="Infinity"/>
             <padding>
                 <Insets topRightBottomLeft="5"/>
             </padding>

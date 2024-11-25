@@ -1,10 +1,7 @@
 package de.vrauchhaupt.chatbotfx.view;
 
 import de.vrauchhaupt.chatbotfx.manager.*;
-import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
-import de.vrauchhaupt.chatbotfx.model.DisplayRole;
-import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
-import io.github.ollama4j.models.chat.OllamaChatMessage;
+import de.vrauchhaupt.chatbotfx.model.*;
 import javafx.animation.Transition;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -20,7 +17,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 
@@ -50,9 +46,11 @@ public class ChatMainWindow implements IPrintFunction {
     @FXML
     private Button buttonSend;
     @FXML
+    private Button buttonCancel;
+    @FXML
     private ChoiceBox<LlmModelCardJson> choiceBoxModel;
     @FXML
-    private VBox containerChat;
+    private ChatContainer containerChat;
     @FXML
     private StackPane paneLoadBlocker;
     @FXML
@@ -76,8 +74,9 @@ public class ChatMainWindow implements IPrintFunction {
     private Button buttonLoad;
 
     private DisplayRole currentDisplayRole = null;
-    private TextFlow currentLineInChat = null;
     private Transition loadingTransition = null;
+    private boolean oldJobInProgress = false;
+    private boolean blocking = false;
     private final ChangeListener<LlmModelCardJson> modelCardSelectionChangeListener = (observable, oldValue, newValue) -> modelChanged(newValue);
 
     public ChatMainWindow() {
@@ -87,6 +86,7 @@ public class ChatMainWindow implements IPrintFunction {
     @FXML
     public void initialize() {
         setupLoadingBackground();
+        buttonCancel.setOnAction(this::buttonCancelClicked);
         buttonSend.setOnAction(this::buttonSendClicked);
         buttonClear.setOnAction(this::buttonClearClicked);
         buttonSave.setOnAction(this::buttonSaveClicked);
@@ -135,11 +135,21 @@ public class ChatMainWindow implements IPrintFunction {
         menuItemReloadModels.setOnAction(this::buttonReloadModelsClicked);
         menuItemTts.selectedProperty().bindBidirectional(SettingsManager.instance().ttsGenerationProperty());
         menuItemTxt2Img.selectedProperty().bindBidirectional(SettingsManager.instance().text2ImageGenerationProperty());
+
+        ThreadManager.instance().startEndlessThread("Block/Unblock UI", this::controllWorkingInProgress);
     }
 
-    private void buttonReloadModelsClicked(ActionEvent actionEvent) {
+
+    private void buttonCancelClicked(ActionEvent actionEvent) {
+        PrintingManager.instance().cancelWork();
+        OllamaManager.instance().cancelWork();
+        PiperManager.instance().cancelWork();
+    }
+
+    public void buttonReloadModelsClicked(ActionEvent actionEvent) {
         choiceBoxModel.valueProperty().removeListener(modelCardSelectionChangeListener);
         PiperManager.instance().reloadTtsModels();
+        LlmModelCardManager.instance().reloadLlmModelFiles();
         List<LlmModelCardJson> availableModelCards = new ArrayList<>(LlmModelCardManager.instance().reloadModelCards());
         choiceBoxModel.getItems().setAll(availableModelCards);
         choiceBoxModel.setValue(LlmModelCardManager.instance().getSelectedLlModelCard());
@@ -149,16 +159,18 @@ public class ChatMainWindow implements IPrintFunction {
     private void buttonClearClicked(ActionEvent actionEvent) {
         ChatViewModel.instance().clearHistory();
         currentDisplayRole = null;
-        containerChat.getChildren().clear();
+        containerChat.clearChat();
         containerImages.getChildren().clear();
     }
 
     private void buttonLoadClicked(ActionEvent actionEvent) {
         buttonClearClicked(null);
         ChatViewModel.instance().loadMessagesFromFile(this);
-        for (OllamaChatMessage ollamaChatMessage : ChatViewModel.instance().getFullHistory()) {
-            render(DisplayRole.of(ollamaChatMessage.getRole()), ollamaChatMessage.getContent());
-            renderNewLine();
+        for (IndexedOllamaChatMessage ollamaChatMessage : ChatViewModel.instance().getFullHistory()) {
+            render(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
+                    ollamaChatMessage.getChatMessage().getContent(),
+                    ollamaChatMessage.getId());
+            renderNewLine(ollamaChatMessage.getId());
         }
     }
 
@@ -196,8 +208,14 @@ public class ChatMainWindow implements IPrintFunction {
     private void modelChanged(LlmModelCardJson newValue) {
         buttonClearClicked(null);
         doWithBlocking(() -> {
-            render(DisplayRole.TOOL, "Loading model '" + newValue.getModelCardName() + "' ...");
-            LlmModelCardManager.instance().selectedLlModelCardProperty().set(newValue);
+            render(DisplayRole.TOOL, "Loading model '" + newValue.getModelCardName() + "' ...", -1);
+            try {
+                LlmModelCardManager.instance().selectedLlModelCardProperty().set(newValue);
+            } catch (Exception e) {
+                e.printStackTrace();
+                render(DisplayRole.TOOL, "Could not load model '" + newValue.getModelCardName() + "', because of " + e.getMessage(), -1);
+                return;
+            }
 
             Platform.runLater(() -> {
                 buttonClearClicked(null);
@@ -212,88 +230,87 @@ public class ChatMainWindow implements IPrintFunction {
                     }
                 }
             });
-            render(DisplayRole.TOOL, "Model '" + newValue.getModelCardName() + "' loaded");
-
+            render(DisplayRole.TOOL, "Model '" + newValue.getModelCardName() + "' loaded", -1);
         });
 
     }
 
     private void doWithBlocking(Runnable runnable) {
+        if (blocking) {
+            throw new RuntimeException("Already blocked");
+        }
+        if (oldJobInProgress) {
+            throw new RuntimeException("Another job is in progress");
+        }
+        blocking = true;
         Platform.runLater(() -> {
-            paneLoadBlocker.setVisible(true);
-            loadingTransition.play();
             textFieldSystemInput.setText("");
             textFieldUserInput.setText("");
             textFieldUserInput.requestFocus();
-            setEnabled(false);
-            Thread returnValue = new Thread(() -> {
+            new Thread(() -> {
                 try {
                     runnable.run();
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
-                    waitForAllServicesDoneAndUnblock();
+                    blocking = false;
                 }
-            });
-            returnValue.start();
+            }).start();
         });
     }
 
-    public void waitForAllServicesDoneAndUnblock() {
-        ThreadManager.instance().startThread("Unblock UI", () -> waitForAllServicesDoneAndUnblockInternally());
-    }
 
-    private void waitForAllServicesDoneAndUnblockInternally() {
+    private void controllWorkingInProgress(ControlledThread controlledThread) {
         try {
-            Thread.sleep(800);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             return;
             // nothing to do
         }
-        if (PrintingManager.instance().isWorking() || PiperManager.instance().isWorking()) {
-            waitForAllServicesDoneAndUnblock();
+
+        boolean jobInProgress = blocking ||
+                PrintingManager.instance().isWorking() ||
+                PiperManager.instance().isWorking() ||
+                OllamaManager.instance().isWorking();
+        if (oldJobInProgress == jobInProgress)
             return;
-        }
+        oldJobInProgress = jobInProgress;
         Platform.runLater(() -> {
-            paneLoadBlocker.setVisible(false);
-            setEnabled(true);
-            textFieldUserInput.requestFocus();
-            loadingTransition.stop();
+            setEnabled(!jobInProgress);
         });
     }
 
     public void setEnabled(boolean enabled) {
+        buttonCancel.setDisable(enabled);
         buttonSend.setDisable(!enabled);
         choiceBoxModel.setDisable(!enabled);
+        paneLoadBlocker.setVisible(!enabled);
+        if (!enabled)
+            loadingTransition.playFromStart();
+        else
+            loadingTransition.stop();
     }
 
     @Override
-    public void render(DisplayRole displayRole, String textFragment) {
+    public void render(DisplayRole displayRole, String textFragment, int chatMessageIndex) {
+        if (textFragment == null || textFragment.trim().isEmpty()) {
+            containerChat.appendToLastText(" "); // problems with boundsInParent() when there are empty texts
+            return;
+        }
         Platform.runLater(() -> {
             if (currentDisplayRole != displayRole) {
-                TextFlow newLine = newLineInFx();
+                CopyableTextFlow newLine = containerChat.newLineInFx(this, chatMessageIndex);
                 newLine.setStyle("-fx-padding: 2px 0 0 0;");
-                Text roleText = new Text(displayRole.name() + " : ");
-                roleText.getStyleClass().add("roleText");
-                roleText.setStyle("-fx-font-weight: bold; -fx-text-fill: " + displayRole.getBackgroundColor() + ";");
-                currentLineInChat.getChildren().add(roleText);
+                containerChat.currentLine(this, chatMessageIndex).addText(new RoleText(displayRole));
                 currentDisplayRole = displayRole;
             }
-            currentLineInChat.getChildren().add(new Text(textFragment));
+            containerChat.currentLine(this, chatMessageIndex).addText(new Text(textFragment));
         });
     }
 
-    private TextFlow newLineInFx() {
-        currentLineInChat = new CopyableTextFlow(this);
-        currentLineInChat.setPrefWidth(containerChat.getWidth() - 10.0);
-        currentLineInChat.setMinWidth(containerChat.getWidth() - 10.0);
-        containerChat.getChildren().add(currentLineInChat);
-        return currentLineInChat;
-    }
-
     @Override
-    public void renderNewLine() {
-        Platform.runLater(this::newLineInFx);
+    public void renderNewLine( int chatMessageIndex) {
+        Platform.runLater(() -> containerChat.newLineInFx(this, chatMessageIndex));
     }
 
     @Override
@@ -333,12 +350,12 @@ public class ChatMainWindow implements IPrintFunction {
             tmpSystemPromptForImage = LlmModelCardManager.instance().getSelectedLlModelCard().getSystem();
 
         if (!tmpSystemPromptForImage.isEmpty()) {
-            render(DisplayRole.SYSTEM, tmpSystemPromptForImage);
+            render(DisplayRole.SYSTEM, tmpSystemPromptForImage, IndexedOllamaChatMessage.newId());
             if (SettingsManager.instance().isText2ImageGeneration())
                 fileNewImageRendering(tmpSystemPromptForImage);
         }
         if (!curUserPrompt.isEmpty())
-            render(DisplayRole.USER, curUserPrompt);
+            render(DisplayRole.USER, curUserPrompt, IndexedOllamaChatMessage.newId());
 
         doWithBlocking(() -> {
             ChatViewModel.instance().ask(curSystemPrompt, curUserPrompt);
