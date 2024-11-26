@@ -19,7 +19,6 @@ import java.util.List;
 
 public class ChatViewModel implements IMessaging {
 
-    private static final int MAX_RECENT_MESSAGES_TO_SEND = 50;
     private static ChatViewModel INSTANCE = null;
 
     private final ChatbotLlmStreamHandler streamHandler = new ChatbotLlmStreamHandler();
@@ -45,18 +44,24 @@ public class ChatViewModel implements IMessaging {
         return new ArrayList<>(messages);
     }
 
+    public int getFullHistorySize()
+    {
+        return messages.size();
+    }
+
     public List<IndexedOllamaChatMessage> trimmedHistory() {
         List<IndexedOllamaChatMessage> returnValue = new ArrayList<>();
         if (messages.isEmpty())
             return returnValue;
-        if (messages.size() <= MAX_RECENT_MESSAGES_TO_SEND + 1)
+        if (SettingsManager.instance().getMessagesToStripForLLM() <= 0 ||
+                messages.size() <= SettingsManager.instance().getMessagesToStripForLLM() + 1)
             returnValue.addAll(messages);
         else {
             IndexedOllamaChatMessage firstMessage = messages.getFirst(); // if it is a system (what should be, this is important)
-            if (firstMessage.getChatMessage().getRole().equals(OllamaChatMessageRole.SYSTEM)) {
+            if (firstMessage.getChatMessage().getRole().getRoleName().equals(OllamaChatMessageRole.SYSTEM.getRoleName())) {
                 returnValue.add(firstMessage);
             }
-            returnValue.addAll(messages.subList(Math.max(0, messages.size() - MAX_RECENT_MESSAGES_TO_SEND), messages.size()));
+            returnValue.addAll(messages.subList(Math.max(0, messages.size() - SettingsManager.instance().getMessagesToStripForLLM()), messages.size()));
         }
         return returnValue;
     }
@@ -200,7 +205,7 @@ public class ChatViewModel implements IMessaging {
         messages.add(new IndexedOllamaChatMessage(ollamaChatMessage));
     }
 
-    public void appendAssistant(TtsSentence ttsSentence) {
+    public synchronized void appendAssistant(TtsSentence ttsSentence) {
         IndexedOllamaChatMessage indexedOllamaChatMessage = messages.stream().filter(x -> x.getId() == ttsSentence.getChatMessageIndex())
                 .findFirst().orElse(null);
         if (indexedOllamaChatMessage == null) {

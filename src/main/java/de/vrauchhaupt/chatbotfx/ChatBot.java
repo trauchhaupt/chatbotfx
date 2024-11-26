@@ -1,6 +1,5 @@
 package de.vrauchhaupt.chatbotfx;
 
-import de.vrauchhaupt.chatbotfx.manager.LlmModelCardManager;
 import de.vrauchhaupt.chatbotfx.manager.SettingsManager;
 import de.vrauchhaupt.chatbotfx.manager.ThreadManager;
 import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
@@ -11,6 +10,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.io.InputStream;
@@ -40,6 +40,7 @@ public class ChatBot extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
+            Screen primaryScreen = Screen.getPrimary();
             mainStage = primaryStage;
             Thread.currentThread().setUncaughtExceptionHandler(ThreadManager.instance());
 
@@ -54,7 +55,9 @@ public class ChatBot extends Application {
             FXMLLoader loader = new FXMLLoader(resource);
             mainWindowNode = loader.load();
             chatMainWindow = loader.getController();
-            Scene scene = new Scene(mainWindowNode, 1200, 1000);
+            Scene scene = new Scene(mainWindowNode, 1200, primaryScreen.getVisualBounds().getHeight() - 50);
+            primaryStage.setX(0); // Position at the left of the monitor
+            primaryStage.setY(4); // Start from the top
             primaryStage.setScene(scene);
             primaryStage.setTitle("ChatBot");
             primaryStage.setOnCloseRequest(event -> {

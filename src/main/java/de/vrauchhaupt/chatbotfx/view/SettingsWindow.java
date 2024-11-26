@@ -20,6 +20,7 @@ import java.nio.file.Path;
 import java.util.function.Predicate;
 
 public class SettingsWindow {
+
     @FXML
     private Button buttonSave;
     @FXML
@@ -38,6 +39,10 @@ public class SettingsWindow {
     private Button buttonPathToLlmModelFiles;
     @FXML
     private Label warningUrlToOllamaHost;
+    @FXML
+    private TextField textFieldStripMessagesForLlm;
+    @FXML
+    private Label warningStripMessagesForLlm;
     @FXML
     private TextField textFieldUrlToOllamaHost;
     @FXML
@@ -73,12 +78,16 @@ public class SettingsWindow {
         textFieldPathToPiper.setText(SettingsManager.instance().getPathToPiper() == null ? "" : SettingsManager.instance().getPathToPiper().toAbsolutePath().toString());
         textFieldPathToTtsModels.setText(SettingsManager.instance().getPathToTtsModelFiles() == null ? "" : SettingsManager.instance().getPathToTtsModelFiles().toAbsolutePath().toString());
         textFieldPathToLlmModelFiles.setText(SettingsManager.instance().getPathToLlmModelFiles() == null ? "" : SettingsManager.instance().getPathToLlmModelFiles().toAbsolutePath().toString());
+        textFieldStripMessagesForLlm.setText(SettingsManager.instance().getMessagesToStripForLLM() + "");
         textFieldPathToModelCards.setText(SettingsManager.instance().getPathToLlmModelCards() == null ? "" : SettingsManager.instance().getPathToLlmModelCards().toAbsolutePath().toString());
         textFieldUrlToWebuiForgeHost.setText(SettingsManager.instance().getWebuiForgeHost());
+        textFieldStripMessagesForLlm.setText(SettingsManager.instance().getMessagesToStripForLLM() + "");
         textFieldUrlToOllamaHost.setText(SettingsManager.instance().getOllamaHost());
 
         textFieldPathToLlmModelFiles.textProperty().addListener((obs, oldV, newV) -> isPathToLlmModelFilesValid());
         isPathToLlmModelFilesValid();
+        textFieldStripMessagesForLlm.textProperty().addListener((obs, oldV, newV) -> isStripMessagesForLlmValid());
+        isStripMessagesForLlmValid();
         textFieldUrlToOllamaHost.textProperty().addListener((obs, oldV, newV) -> isOllamaHostValid());
         isOllamaHostValid();
         textFieldUrlToWebuiForgeHost.textProperty().addListener((obs, oldV, newV) -> isWebuiForgeHostValid());
@@ -109,6 +118,8 @@ public class SettingsWindow {
         if (warningPathToPiper.getText() != null && !warningPathToPiper.getText().isEmpty())
             return false;
         if (warningPathToTtsModels.getText() != null && !warningPathToTtsModels.getText().isEmpty())
+            return false;
+        if (warningStripMessagesForLlm.getText() != null && !warningStripMessagesForLlm.getText().isEmpty())
             return false;
         if (warningUrlToOllamaHost.getText() != null && !warningUrlToOllamaHost.getText().isEmpty())
             return false;
@@ -184,6 +195,16 @@ public class SettingsWindow {
         checkButtonSaveState();
     }
 
+    private void isStripMessagesForLlmValid() {
+        try {
+            Integer.parseInt(textFieldStripMessagesForLlm.getText());
+            warningStripMessagesForLlm.setText("");
+        } catch (NumberFormatException e) {
+            warningStripMessagesForLlm.setText("Please enter a number");
+        }
+    }
+
+
     private void isPathToLlmModelFilesValid() {
         validateDirectoryExists(textFieldPathToLlmModelFiles, warningPathToLlmModelFiles, x -> x.toString().endsWith(".gguf"), "*.gguf");
         checkButtonSaveState();
@@ -236,6 +257,11 @@ public class SettingsWindow {
         SettingsManager.instance().setPathToTtsModelFiles(new File(textFieldPathToTtsModels.getText()).toPath());
         SettingsManager.instance().setPathToLlmModelFiles(new File(textFieldPathToLlmModelFiles.getText()).toPath());
         SettingsManager.instance().setPathToLlmModelCards(new File(textFieldPathToModelCards.getText()).toPath());
+        try {
+            int amountOfMessages = Integer.parseInt(textFieldStripMessagesForLlm.getText());
+            SettingsManager.instance().setMessagesToStripForLLM(amountOfMessages);
+        } catch (NumberFormatException e) {
+        }
         SettingsManager.instance().setWebuiForgeHost(textFieldUrlToWebuiForgeHost.getText());
         SettingsManager.instance().setOllamaHost(textFieldUrlToOllamaHost.getText());
     }

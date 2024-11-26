@@ -32,6 +32,12 @@
     </VBox>
 
     <VBox spacing="3">
+        <Label text="Amount of Messaages For LLM" style="-fx-font-weight:bold;"/>
+        <TextField fx:id="textFieldStripMessagesForLlm"/>
+        <Label text="" fx:id="warningStripMessagesForLlm"/>
+    </VBox>
+
+    <VBox spacing="3">
         <Label text="Path To Piper TTS" style="-fx-font-weight:bold;"/>
         <HBox>
             <TextField fx:id="textFieldPathToPiper" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>

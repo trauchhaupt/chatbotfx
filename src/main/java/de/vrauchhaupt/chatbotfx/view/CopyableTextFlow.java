@@ -5,6 +5,7 @@ import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -142,10 +143,18 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     protected void addText(Text aText) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> addText(aText));
+            return;
+        }
         getChildren().add(aText);
+        requestLayout();
     }
 
     protected List<Text> getTextNodes() {
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("NOT APPLICATION THREAD 1");
+        }
         return getChildren().stream()
                 .filter(x -> x instanceof Text)
                 .map(x -> (Text) x)
@@ -153,6 +162,9 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     protected List<Text> getPureTextNodes() {
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("NOT APPLICATION THREAD 2");
+        }
         return getChildren().stream()
                 .filter(x -> (x instanceof Text) && !(x instanceof RoleText))
                 .map(x -> (Text) x)
@@ -160,6 +172,10 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     private void triggerBlinkEffect() {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> triggerBlinkEffect());
+            return;
+        }
         // Create a timeline for the blink effect
         Timeline timeline = new Timeline(
                 new KeyFrame(Duration.ZERO, new KeyValue(opacityProperty(), 1.0)),
@@ -173,12 +189,19 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     public String valuesToString() {
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("NOT APPLICATION THREAD 3");
+        }
         StringBuilder textContent = new StringBuilder();
         extractText(textContent);
         return textContent.toString();
     }
 
     private void copyTextFlowToClipboard() {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> copyTextFlowToClipboard());
+            return;
+        }
         Clipboard clipboard = Clipboard.getSystemClipboard();
         ClipboardContent content = new ClipboardContent();
         content.putString(valuesToString());
@@ -186,6 +209,9 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     protected void extractText(StringBuilder textContent) {
+        if (!Platform.isFxApplicationThread()) {
+            System.err.println("NOT APPLICATION THREAD 4");
+        }
         for (Node node : getChildren()) {
             if (node instanceof RoleText) {
                 continue;
@@ -200,11 +226,16 @@ public class CopyableTextFlow extends TextFlow {
         }
     }
 
-    public void appendToLastText(String space) {
+    public void appendToLastText(String newText) {
+        if (!Platform.isFxApplicationThread()) {
+            Platform.runLater(() -> appendToLastText(newText));
+            return;
+        }
         List<Text> textNodes = getTextNodes();
         if (textNodes.isEmpty())
             return;
         Text lastText = textNodes.get(textNodes.size() - 1);
-        lastText.setText(lastText.getText() + space);
+        lastText.setText(lastText.getText() + newText);
+        requestLayout();
     }
 }

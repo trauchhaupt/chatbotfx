@@ -96,7 +96,7 @@ public class OllamaManager extends AbstractManager {
                 .setTemperature(model.getTemperature())
                 .setTopP(model.getTop_p())
                 .setTopK(model.getTop_k())
-                .setRepeatPenalty(1.7f)
+                .setRepeatPenalty(1.9f)
                 .build();
 
         OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model.getLlmModel());
@@ -119,7 +119,7 @@ public class OllamaManager extends AbstractManager {
         }
 
         if (message != null && !message.trim().isEmpty()) {
-            ChatViewModel.instance().appendSystemOrPrompt(OllamaChatMessageRole.USER, systemNotice);
+            ChatViewModel.instance().appendSystemOrPrompt(OllamaChatMessageRole.USER, message);
             ollamaChatRequestBuilder = ollamaChatRequestBuilder
                     .withMessage(OllamaChatMessageRole.USER, message);
         }

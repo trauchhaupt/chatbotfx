@@ -9,5 +9,4 @@ public class RoleText extends Text {
         getStyleClass().add("roleText");
         setStyle("-fx-font-weight: bold; -fx-text-fill: " + role.getBackgroundColor() + ";");
     }
-
 }

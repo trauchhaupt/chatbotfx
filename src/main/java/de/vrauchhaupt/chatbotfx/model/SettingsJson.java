@@ -7,6 +7,7 @@ public class SettingsJson extends AbstractJson {
     private String pathToTtsModelFiles;
     private String selectedLlmModelCard;
     private String ollamaHost;
+    private int messagesToStripForLlm;
 
     public String getPathToPiper() {
         return pathToPiper;
@@ -62,6 +63,12 @@ public class SettingsJson extends AbstractJson {
         return this;
     }
 
+    public int getMessagesToStripForLlm() {
+        return messagesToStripForLlm;
+    }
 
-
+    public SettingsJson setMessagesToStripForLlm(int messagesToStripForLlm) {
+        this.messagesToStripForLlm = messagesToStripForLlm;
+        return this;
+    }
 }

@@ -30,6 +30,7 @@
                 <Button fx:id="buttonClear" text="Clear"/>
                 <Button fx:id="buttonSave" text="Save"/>
                 <Button fx:id="buttonLoad" text="Load"/>
+                <Label fx:id="messageCounter" />
             </HBox>
         </VBox>
     </top>

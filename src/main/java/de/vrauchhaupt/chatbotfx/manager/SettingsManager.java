@@ -5,9 +5,7 @@ import de.vrauchhaupt.chatbotfx.helper.JsonHelper;
 import de.vrauchhaupt.chatbotfx.model.SettingsJson;
 import de.vrauchhaupt.chatbotfx.view.SettingsWindow;
 import jakarta.validation.constraints.NotNull;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.*;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -40,6 +38,7 @@ public class SettingsManager extends AbstractManager {
     private final SimpleStringProperty webuiForgeHost = new SimpleStringProperty(DEFAULT_WEBUI_FORGE_HOST);
     private final SimpleBooleanProperty text2ImageGeneration = new SimpleBooleanProperty(false);
     private final SimpleBooleanProperty ttsGeneration = new SimpleBooleanProperty(true);
+    private final IntegerProperty messagesToStripForLLM = new SimpleIntegerProperty(30);
 
     private boolean isLoadingInProgress = false;
     private final ChangeListener saveToFileListener = (obs, oldV, newV) -> {
@@ -56,6 +55,7 @@ public class SettingsManager extends AbstractManager {
         selectedLlmModelCard.addListener(saveToFileListener);
         ollamaHost.addListener(saveToFileListener);
         webuiForgeHost.addListener(saveToFileListener);
+        messagesToStripForLLM.addListener(saveToFileListener);
         selectedLlmModelCard.addListener(((observableValue, oldV, newV) -> System.out.println("Selected model card from " + oldV + " to " + newV)));
     }
 
@@ -192,6 +192,19 @@ public class SettingsManager extends AbstractManager {
         return text2ImageGeneration;
     }
 
+    public int getMessagesToStripForLLM() {
+        return messagesToStripForLLM.get();
+    }
+
+    public SettingsManager setMessagesToStripForLLM(int amountOfMessages) {
+        messagesToStripForLLM.set(amountOfMessages);
+        return this;
+    }
+
+    public IntegerProperty messagesToStripForLLMProperty() {
+        return messagesToStripForLLM;
+    }
+
     public SettingsJson toJsonObject() {
         return new SettingsJson()
                 .setPathToPiper(getPathToPiper() == null ? null : getPathToPiper().toAbsolutePath().toString())
@@ -199,7 +212,8 @@ public class SettingsManager extends AbstractManager {
                 .setPathToLlmModelFiles(getPathToLlmModelFiles().toAbsolutePath().toString())
                 .setPathToTtsModelFiles(getPathToTtsModelFiles().toAbsolutePath().toString())
                 .setOllamaHost(getOllamaHost())
-                .setSelectedLlmModelCard(getSelectedLlmModelCard());
+                .setSelectedLlmModelCard(getSelectedLlmModelCard())
+                .setMessagesToStripForLlm(getMessagesToStripForLLM());
 
     }
 
@@ -216,6 +230,7 @@ public class SettingsManager extends AbstractManager {
             setPathToTtsModelFiles(settingsJson.getPathToTtsModelFiles() == null ? null : Paths.get(settingsJson.getPathToTtsModelFiles()));
             setSelectedLlmModelCard(settingsJson.getSelectedLlmModelCard());
             setOllamaHost(settingsJson.getOllamaHost());
+            setMessagesToStripForLLM(settingsJson.getMessagesToStripForLlm());
         } catch (Exception e) {
             throw new RuntimeException("Could not load settings from SettingsJson", e);
         } finally {
@@ -249,6 +264,7 @@ public class SettingsManager extends AbstractManager {
             System.err.println("No Model cards can be found");
             return false;
         }
+
         return true;
     }
 

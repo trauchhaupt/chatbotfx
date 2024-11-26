@@ -38,7 +38,6 @@ public class LoadableImageView extends StackPane {
             menuItemSetAsModelImage);
 
     public LoadableImageView() {
-
         super();
         setPrefHeight(StableDiffusionManager.GENERATED_IMAGE_HEIGHT + 2);
         setMinHeight(StableDiffusionManager.GENERATED_IMAGE_HEIGHT + 2);

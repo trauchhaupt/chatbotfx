@@ -232,7 +232,16 @@ public class LlmModelCardManager extends AbstractManager {
 
     public List<LlmModelCardJson> reloadModelCards() {
         availableModelCards = null;
-        return getAvailableModelCards();
+        LlmModelCardJson selectedLlModelCard1 = getSelectedLlModelCard();
+        List<LlmModelCardJson> reloadedCards = getAvailableModelCards();
+        if (selectedLlModelCard1 != null) {
+            LlmModelCardJson reloadedSelectedCard = reloadedCards.stream()
+                    .filter(x -> x.getModelCardName().equals(selectedLlModelCard1.getModelCardName()))
+                    .findFirst()
+                    .orElse(null);
+            selectedLlModelCard.set(reloadedSelectedCard);
+        }
+        return reloadedCards;
     }
 
     public Map<String, Path> reloadLlmModelFiles() {
