@@ -12,10 +12,7 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 public class ChatViewModel implements IMessaging {
 
@@ -153,12 +150,14 @@ public class ChatViewModel implements IMessaging {
             messages.clear();
         else
             messages.setAll(ollamaChatMessages.getMessages().stream()
-                    .map(x -> new IndexedOllamaChatMessage(x))
+                    .map(IndexedOllamaChatMessage::new)
                     .toList());
         deleteExistingRuntimeImages();
 
         for (IndexedOllamaChatMessage ollamaChatMessage : messages) {
-            printer.render(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()), ollamaChatMessage.getChatMessage().getContent(), ollamaChatMessage.getId());
+            printer.render(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
+                    ollamaChatMessage.getChatMessage().getContent(),
+                    ollamaChatMessage.getId());
         }
 
         List<Path> filesToCopy = new ArrayList<>();
@@ -170,7 +169,7 @@ public class ChatViewModel implements IMessaging {
         } catch (Exception e) {
             throw new RuntimeException("Could not list existing image files from " + dirToLoadFrom);
         }
-        Collections.sort(filesToCopy, Comparator.comparing(Path::getFileName));
+        filesToCopy.sort(Comparator.comparing(Path::getFileName));
         for (Path path : filesToCopy) {
             try {
                 printer.addImage(getCurImageIndex(), Files.readAllBytes(path), null);
@@ -218,5 +217,12 @@ public class ChatViewModel implements IMessaging {
                     indexedOllamaChatMessage.getChatMessage().getContent() + " " + ttsSentence.getText()
             );
         }
+    }
+
+    public void removeAllMessages(Set<Integer> messageIndexesToDelete) {
+        List<IndexedOllamaChatMessage> messagesToRemove = messages.stream()
+                .filter(x -> messageIndexesToDelete.contains(x.getId()))
+                .toList();
+        messages.removeAll(messagesToRemove);
     }
 }

@@ -28,6 +28,11 @@ public class ChatContainer extends VBox {
         if (!Platform.isFxApplicationThread()) {
             System.err.println("NOT APPLICATION THREAD 5");
         }
+        if (!getChildren().isEmpty()) {
+            int previousMessageIndex = ((CopyableTextFlow) getChildren().get(0)).getChatMessageIndex();
+            if (previousMessageIndex > chatMessageIndex)
+                throw new RuntimeException("The previous message index " + previousMessageIndex + " is bigger than the actual one");
+        }
         currentLineInChat = new CopyableTextFlow(printFunction, chatMessageIndex);
         currentLineInChat.setPrefWidth(this.getWidth() - 10.0);
         currentLineInChat.setMinWidth(this.getWidth() - 10.0);
@@ -41,7 +46,7 @@ public class ChatContainer extends VBox {
             System.err.println("NOT APPLICATION THREAD 5");
         }
         if (currentLineInChat == null)
-            return newLineInFx(printFunction,chatMessageIndex);
+            return newLineInFx(printFunction, chatMessageIndex);
         return currentLineInChat;
     }
 

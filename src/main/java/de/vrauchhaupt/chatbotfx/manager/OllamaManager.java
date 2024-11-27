@@ -130,6 +130,10 @@ public class OllamaManager extends AbstractManager {
         currentAskingThread = ThreadManager.instance().startThread("Asking Ollama Thread", () -> {
                     try {
                         OllamaChatResult chat = newOllamaApi().chat(ollamaChatRequestModel, streamHandler);
+                        if ( chat.getHttpStatusCode() != 200)
+                        {
+                            logLn("Error code " + chat.getHttpStatusCode() + " was given!");
+                        }
                         chat.getResponse();
                         streamHandler.inputHasStopped();
                     } catch (InterruptedException e) {

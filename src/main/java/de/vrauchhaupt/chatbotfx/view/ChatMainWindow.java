@@ -128,7 +128,6 @@ public class ChatMainWindow implements IPrintFunction {
 
         Platform.runLater(() -> textFieldUserInput.requestFocus());
         containerChat.heightProperty().addListener((observable, oldValue, newValue) -> {
-            if (scrollPaneChat.getVvalue() > 0.9)
                 scrollPaneChat.setVvalue(1.0); // Scroll to the bottom
         });
 

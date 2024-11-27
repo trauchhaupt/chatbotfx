@@ -2,37 +2,39 @@ package de.vrauchhaupt.chatbotfx.view;
 
 import de.vrauchhaupt.chatbotfx.manager.IPrintFunction;
 import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
+import de.vrauchhaupt.chatbotfx.model.DisplayRole;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.ContextMenuEvent;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.util.Duration;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class CopyableTextFlow extends TextFlow {
     private final IPrintFunction printFunction;
     private final int chatMessageIndex;
-    private MenuItem menuItemCopy = new MenuItem("Copy");
-    private MenuItem menuItemNewImage = new MenuItem("New Image");
-    private MenuItem menuItemRemove = new MenuItem("Remove");
-    private MenuItem menuItemMergeWithAbove = new MenuItem("Merge with above");
-    private MenuItem menuItemMergeWithBelow = new MenuItem("Merge with below");
-    private ContextMenu contextMenu = new ContextMenu(menuItemCopy,
+    private final MenuItem menuItemCopy = new MenuItem("Copy");
+    private final MenuItem menuItemNewImage = new MenuItem("New Image");
+    private final MenuItem menuItemRemoveAllAbove = new MenuItem("Remove Messages above");
+    private final MenuItem menuItemRemove = new MenuItem("Remove");
+    private final MenuItem menuItemMergeWithAbove = new MenuItem("Merge with above");
+    private final MenuItem menuItemMergeWithBelow = new MenuItem("Merge with below");
+    private final ContextMenu contextMenu = new ContextMenu(menuItemCopy,
             menuItemNewImage,
+            menuItemRemoveAllAbove,
             menuItemRemove,
             menuItemMergeWithAbove,
             menuItemMergeWithBelow);
@@ -44,6 +46,7 @@ public class CopyableTextFlow extends TextFlow {
 
         menuItemCopy.setOnAction(this::menuItemCopyClicked);
         menuItemNewImage.setOnAction(this::menuItemNewImageClicked);
+        menuItemRemoveAllAbove.setOnAction(this::menuItemRemoveAllAboveClicked);
         menuItemRemove.setOnAction(this::menuItemRemoveClicked);
         menuItemMergeWithAbove.setOnAction(this::menuItemMergeWithAboveClicked);
         menuItemMergeWithBelow.setOnAction(this::menuItemMergeWithBelowClicked);
@@ -105,6 +108,37 @@ public class CopyableTextFlow extends TextFlow {
         return !getChildren().isEmpty() && getChildren().get(0) instanceof RoleText;
     }
 
+    public DisplayRole getRole() {
+        if (getChildren().isEmpty())
+            return null;
+        Node node = getChildren().get(0);
+        if (node instanceof RoleText roleText)
+            return roleText.getRole();
+        return null;
+    }
+
+    private void menuItemRemoveAllAboveClicked(ActionEvent actionEvent) {
+        VBox parentContainer = parentContainer();
+        int myIndex = parentContainer.getChildren().indexOf(this);
+        if (myIndex < 2)
+            return;
+        List<CopyableTextFlow> messagesAbove = parentContainer.getChildren().stream()
+                .filter(x -> x instanceof CopyableTextFlow)
+                .map(x -> (CopyableTextFlow) x)
+                .filter(x -> x.getChatMessageIndex() < getChatMessageIndex())
+                .collect(Collectors.toList());
+        CopyableTextFlow firstMessage = (CopyableTextFlow) parentContainer.getChildren().get(0);
+        DisplayRole roleFirstMessage = firstMessage.getRole();
+        if (roleFirstMessage == DisplayRole.SYSTEM) {
+            messagesAbove.remove(firstMessage);
+        }
+        Set<Integer> messageIndexesToDelete = messagesAbove.stream()
+                .map(CopyableTextFlow::getChatMessageIndex)
+                .collect(Collectors.toSet());
+        ChatViewModel.instance().removeAllMessages(messageIndexesToDelete);
+        parentContainer.getChildren().removeAll(messagesAbove);
+    }
+
     private void menuItemRemoveClicked(ActionEvent actionEvent) {
         VBox parentContainer = parentContainer();
         if (getChildren().isEmpty()) {
@@ -136,6 +170,9 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     private void onContextMenuRequested(ContextMenuEvent contextMenuEvent) {
+        VBox parentContainer = parentContainer();
+        int myIndex = parentContainer.getChildren().indexOf(this);
+        menuItemRemoveAllAbove.setDisable(myIndex < 2);
         menuItemMergeWithAbove.setDisable(containsRoleText() || getPreviousTextFlow() == null);
         CopyableTextFlow nextTextFlow = getNextTextFlow();
         menuItemMergeWithBelow.setDisable(nextTextFlow == null || nextTextFlow.containsRoleText());
@@ -237,5 +274,9 @@ public class CopyableTextFlow extends TextFlow {
         Text lastText = textNodes.get(textNodes.size() - 1);
         lastText.setText(lastText.getText() + newText);
         requestLayout();
+    }
+
+    public int getChatMessageIndex() {
+        return chatMessageIndex;
     }
 }
