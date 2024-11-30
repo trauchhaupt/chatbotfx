@@ -8,7 +8,6 @@ import de.vrauchhaupt.chatbotfx.helper.JsonHelper;
 import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -128,16 +127,14 @@ public class StableDiffusionManager extends AbstractManager {
                 Files.deleteIfExists(imageFile);
                 Files.write(imageFile, imageBytes);
 
-                try (ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes)) {
-                    imageConsumer.addImage(index, imageBytes, imageFile);
-                }
+                imageConsumer.addImage(index, imageBytes, imageFile);
                 // unload model
-                String unloadUrl =  webuiForgeHost + "sdapi/v1/unload";
+                /*String unloadUrl = webuiForgeHost + "sdapi/v1/unload";
                 request = HttpRequest.newBuilder()
                         .uri(URI.create(unloadUrl))
                         .POST(HttpRequest.BodyPublishers.noBody()) // No body needed
                         .build();
-                response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                response = client.send(request, HttpResponse.BodyHandlers.ofString());*/
             } else {
                 throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + response.body() + " - URL was ");
             }

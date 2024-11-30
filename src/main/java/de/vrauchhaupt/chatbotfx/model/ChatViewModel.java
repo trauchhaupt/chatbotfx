@@ -132,7 +132,7 @@ public class ChatViewModel implements IMessaging {
                 try {
                     Files.delete(entry); // Delete each .jpg file
                 } catch (IOException e) {
-                    System.err.println("Failed to delete: " + entry.toString() + " - " + e.getMessage());
+                    System.err.println("Failed to delete: " + entry + " - " + e.getMessage());
                 }
             }
         } catch (IOException e) {
@@ -155,7 +155,7 @@ public class ChatViewModel implements IMessaging {
         deleteExistingRuntimeImages();
 
         for (IndexedOllamaChatMessage ollamaChatMessage : messages) {
-            printer.render(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
+            printer.renderOnFxThread(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
                     ollamaChatMessage.getChatMessage().getContent(),
                     ollamaChatMessage.getId());
         }

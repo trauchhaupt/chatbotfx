@@ -16,7 +16,7 @@ public class PrintingManager extends AbstractManager {
     private IPrintFunction printFunction = null;
 
     public PrintingManager() {
-        ThreadManager.instance().startEndlessThread("Sentence Printing Thread", x -> printSentences(x));
+        ThreadManager.instance().startEndlessThread("Sentence Printing Thread", this::printSentences);
     }
 
     public static PrintingManager instance() {
@@ -34,10 +34,12 @@ public class PrintingManager extends AbstractManager {
         while (!queueToWrite.isEmpty() && thread.shallThreadRun()) {
             currentlyPrinting.set(true);
             TtsSentence ttsSentence = queueToWrite.poll();
+            if (ttsSentence == null)
+                continue;
             logLn("Printing PQ '" + ttsSentence.getText() + "'");
-            int textwidth = 0;
+            int textWidth = 0;
             boolean firstWord = true;
-            ChatViewModel.instance().appendAssistant ( ttsSentence);
+            ChatViewModel.instance().appendAssistant(ttsSentence);
             for (String word : ttsSentence.getWords()) {
                 if (!firstWord) {
                     out(" ", ttsSentence.getChatMessageIndex());
@@ -46,7 +48,7 @@ public class PrintingManager extends AbstractManager {
                 }
                 out(word, ttsSentence.getChatMessageIndex());
 
-                textwidth = textwidth + word.length();
+                textWidth = textWidth + word.length();
                 thread.waitAWhile();
             }
             nextLine(ttsSentence.getChatMessageIndex());
@@ -65,7 +67,7 @@ public class PrintingManager extends AbstractManager {
     @Override
     public void out(String text, int chatMessageIndex) {
         if (printFunction != null)
-            printFunction.render(DisplayRole.ASSISTANT, text, chatMessageIndex);
+            printFunction.renderOnFxThread(DisplayRole.ASSISTANT, text, chatMessageIndex);
         else
             super.out(text, chatMessageIndex);
     }

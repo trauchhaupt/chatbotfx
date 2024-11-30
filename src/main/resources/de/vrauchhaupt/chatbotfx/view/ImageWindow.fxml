@@ -1,15 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.image.*?>
-
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.Pane?>
 <Pane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="de.vrauchhaupt.chatbotfx.view.ImageWindow">
-    <ImageView fx:id="imageView" />
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="de.vrauchhaupt.chatbotfx.view.ImageWindow">
+    <ImageView fx:id="imageView"/>
 
 </Pane>

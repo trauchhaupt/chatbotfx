@@ -11,7 +11,6 @@ import javafx.fxml.FXML;
 import javafx.scene.Group;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
-import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -29,7 +28,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class ChatMainWindow implements IPrintFunction {
+public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
 
     private static final float WAITING_CIRCLE_SIZE = 7;
 
@@ -39,12 +38,12 @@ public class ChatMainWindow implements IPrintFunction {
     @FXML
     private MenuItem menuItemReloadModels;
     @FXML
+    private CheckMenuItem chechMenuItemAutoScroll;
+    @FXML
     private CheckMenuItem menuItemTts;
     @FXML
     private CheckMenuItem menuItemTxt2Img;
 
-    @FXML
-    private Pane paneLoadingBackground;
     @FXML
     private Button buttonSend;
     @FXML
@@ -100,7 +99,7 @@ public class ChatMainWindow implements IPrintFunction {
         try {
             availableModelCards = new ArrayList<>(LlmModelCardManager.instance().getAvailableModelCards());
         } catch (Exception e) {
-            System.err.println("Could not load available model cards, config seems to be invalid");
+            exceptionHappend("Could not load available model cards, config seems to be invalid", e);
         }
         availableModelCards.sort(Comparator.naturalOrder());
         choiceBoxModel.getItems().addAll(availableModelCards);
@@ -128,6 +127,7 @@ public class ChatMainWindow implements IPrintFunction {
 
         Platform.runLater(() -> textFieldUserInput.requestFocus());
         containerChat.heightProperty().addListener((observable, oldValue, newValue) -> {
+            if (chechMenuItemAutoScroll.isSelected())
                 scrollPaneChat.setVvalue(1.0); // Scroll to the bottom
         });
 
@@ -189,16 +189,14 @@ public class ChatMainWindow implements IPrintFunction {
         buttonClearClicked(null);
         ChatViewModel.instance().loadMessagesFromFile(this);
         for (IndexedOllamaChatMessage ollamaChatMessage : ChatViewModel.instance().getFullHistory()) {
-            render(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
+            renderOnFxThread(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
                     ollamaChatMessage.getChatMessage().getContent(),
                     ollamaChatMessage.getId());
             renderNewLine(ollamaChatMessage.getId());
         }
         Platform.runLater(() -> {
             scrollPaneChat.requestLayout();
-            Platform.runLater(() -> {
-                scrollPaneChat.setVvalue(1.0);
-            });
+            Platform.runLater(() -> scrollPaneChat.setVvalue(1.0));
         });
     }
 
@@ -239,7 +237,7 @@ public class ChatMainWindow implements IPrintFunction {
 
     private void renderModelImage() {
         if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> renderModelImage());
+            Platform.runLater(this::renderModelImage);
             return;
         }
         LlmModelCardJson selectedLlModelCard = LlmModelCardManager.instance().getSelectedLlModelCard();
@@ -252,7 +250,7 @@ public class ChatMainWindow implements IPrintFunction {
                 addImage(ChatViewModel.instance().getCurImageIndex(), Files.readAllBytes(path), null);
                 ChatViewModel.instance().increaseCurImageIndex();
             } catch (IOException e) {
-                throw new RuntimeException("Could not read image bytes from " + path.toAbsolutePath(), e);
+                exceptionHappend("Could not read image bytes from " + path.toAbsolutePath(), e);
             }
         }
     }
@@ -263,27 +261,19 @@ public class ChatMainWindow implements IPrintFunction {
             return;
         }
         buttonClearClicked(null);
-        doWithBlocking(() -> {
-            render(DisplayRole.TOOL, "Loading model '" + newValue.getModelCardName() + "' ...", -1);
-            try {
-                LlmModelCardManager.instance().selectedLlModelCardProperty().set(newValue);
-            } catch (Exception e) {
-                e.printStackTrace();
-                render(DisplayRole.TOOL, "Could not load model '" + newValue.getModelCardName() + "', because of " + e.getMessage(), -1);
-                return;
-            }
-
+        doWithBlocking("load model '" + newValue.getModelCardName() + "'", () -> {
+            renderOnFxThread(DisplayRole.TOOL, "Loading model '" + newValue.getModelCardName() + "' ...", -1);
+            LlmModelCardManager.instance().selectedLlModelCardProperty().set(newValue);
             Platform.runLater(() -> {
                 ChatBot.mainStage.setTitle("ChatBot - " + newValue.getModelCardName() + " (" + newValue.getLlmModel() + ")");
                 buttonClearClicked(null);
-
             });
-            render(DisplayRole.TOOL, "Model '" + newValue.getModelCardName() + "' loaded", -1);
+            renderOnFxThread(DisplayRole.TOOL, "Model '" + newValue.getModelCardName() + "' loaded", -1);
         });
 
     }
 
-    private void doWithBlocking(Runnable runnable) {
+    private void doWithBlocking(String action, Runnable runnable) {
         if (blocking) {
             throw new RuntimeException("Already blocked");
         }
@@ -299,7 +289,7 @@ public class ChatMainWindow implements IPrintFunction {
                 try {
                     runnable.run();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    exceptionHappend("Could not '" + action + "'", e);
                 } finally {
                     blocking = false;
                 }
@@ -343,7 +333,7 @@ public class ChatMainWindow implements IPrintFunction {
     }
 
     @Override
-    public synchronized void render(DisplayRole displayRole, String textFragment, int chatMessageIndex) {
+    public synchronized void renderOnFxThread(DisplayRole displayRole, String textFragment, int chatMessageIndex) {
         Platform.runLater(() -> {
             if (textFragment == null || textFragment.trim().isEmpty()) {
                 containerChat.appendToLastText(" "); // problems with boundsInParent() when there are empty texts
@@ -389,9 +379,14 @@ public class ChatMainWindow implements IPrintFunction {
         try (ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes)) {
             imageView.setImage(new Image(bis), imageFile);
         } catch (Exception e) {
-            System.err.println("Could not add image " + index);
-            e.printStackTrace();
+            exceptionHappend("Could not add image " + index, e);
         }
+    }
+
+    private void exceptionHappend (String errorMsgForUser, Exception e)
+    {
+        e.printStackTrace();
+        renderOnFxThread(DisplayRole.TOOL, errorMsgForUser + ", because of " + e.getMessage(), -1);
     }
 
     private void buttonSendClicked(ActionEvent actionEvent) {
@@ -410,16 +405,14 @@ public class ChatMainWindow implements IPrintFunction {
             tmpSystemPromptForImage = LlmModelCardManager.instance().getSelectedLlModelCard().getSystem();
 
         if (!tmpSystemPromptForImage.isEmpty()) {
-            render(DisplayRole.SYSTEM, tmpSystemPromptForImage, IndexedOllamaChatMessage.newId());
+            renderOnFxThread(DisplayRole.SYSTEM, tmpSystemPromptForImage, IndexedOllamaChatMessage.newId());
             if (SettingsManager.instance().isText2ImageGeneration())
                 fileNewImageRendering(tmpSystemPromptForImage);
         }
         if (!curUserPrompt.isEmpty())
-            render(DisplayRole.USER, curUserPrompt, IndexedOllamaChatMessage.newId());
+            renderOnFxThread(DisplayRole.USER, curUserPrompt, IndexedOllamaChatMessage.newId());
 
-        doWithBlocking(() -> {
-            ChatViewModel.instance().ask(curSystemPrompt, curUserPrompt);
-        });
+        doWithBlocking("ask AI assistant", () -> ChatViewModel.instance().ask(curSystemPrompt, curUserPrompt));
     }
 
     @Override

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class CopyableTextFlow extends TextFlow {
+public class CopyableTextFlow extends TextFlow implements IChatBoxViewComponent {
     private final IPrintFunction printFunction;
     private final int chatMessageIndex;
     private final MenuItem menuItemCopy = new MenuItem("Copy");
@@ -105,13 +105,13 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     public boolean containsRoleText() {
-        return !getChildren().isEmpty() && getChildren().get(0) instanceof RoleText;
+        return !getChildren().isEmpty() && getChildren().getFirst() instanceof RoleText;
     }
 
     public DisplayRole getRole() {
         if (getChildren().isEmpty())
             return null;
-        Node node = getChildren().get(0);
+        Node node = getChildren().getFirst();
         if (node instanceof RoleText roleText)
             return roleText.getRole();
         return null;
@@ -127,7 +127,7 @@ public class CopyableTextFlow extends TextFlow {
                 .map(x -> (CopyableTextFlow) x)
                 .filter(x -> x.getChatMessageIndex() < getChatMessageIndex())
                 .collect(Collectors.toList());
-        CopyableTextFlow firstMessage = (CopyableTextFlow) parentContainer.getChildren().get(0);
+        CopyableTextFlow firstMessage = (CopyableTextFlow) parentContainer.getChildren().getFirst();
         DisplayRole roleFirstMessage = firstMessage.getRole();
         if (roleFirstMessage == DisplayRole.SYSTEM) {
             messagesAbove.remove(firstMessage);
@@ -189,9 +189,7 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     protected List<Text> getTextNodes() {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 1");
-        }
+        assertFxThread();
         return getChildren().stream()
                 .filter(x -> x instanceof Text)
                 .map(x -> (Text) x)
@@ -199,9 +197,7 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     protected List<Text> getPureTextNodes() {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 2");
-        }
+        assertFxThread();
         return getChildren().stream()
                 .filter(x -> (x instanceof Text) && !(x instanceof RoleText))
                 .map(x -> (Text) x)
@@ -210,7 +206,7 @@ public class CopyableTextFlow extends TextFlow {
 
     private void triggerBlinkEffect() {
         if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> triggerBlinkEffect());
+            Platform.runLater(this::triggerBlinkEffect);
             return;
         }
         // Create a timeline for the blink effect
@@ -226,9 +222,7 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     public String valuesToString() {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 3");
-        }
+        assertFxThread();
         StringBuilder textContent = new StringBuilder();
         extractText(textContent);
         return textContent.toString();
@@ -236,7 +230,7 @@ public class CopyableTextFlow extends TextFlow {
 
     private void copyTextFlowToClipboard() {
         if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> copyTextFlowToClipboard());
+            Platform.runLater(this::copyTextFlowToClipboard);
             return;
         }
         Clipboard clipboard = Clipboard.getSystemClipboard();
@@ -246,12 +240,10 @@ public class CopyableTextFlow extends TextFlow {
     }
 
     protected void extractText(StringBuilder textContent) {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 4");
-        }
+        assertFxThread();
         for (Node node : getChildren()) {
             if (node instanceof RoleText) {
-                continue;
+                // intentionally we do not want extract the roles
             } else if (node instanceof Text textNode) {
                 if (!textNode.getText().endsWith(" ") &&
                         !textNode.getText().startsWith(" "))
@@ -271,7 +263,7 @@ public class CopyableTextFlow extends TextFlow {
         List<Text> textNodes = getTextNodes();
         if (textNodes.isEmpty())
             return;
-        Text lastText = textNodes.get(textNodes.size() - 1);
+        Text lastText = textNodes.getLast();
         lastText.setText(lastText.getText() + newText);
         requestLayout();
     }

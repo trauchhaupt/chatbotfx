@@ -5,7 +5,7 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.layout.VBox;
 
-public class ChatContainer extends VBox {
+public class ChatContainer extends VBox implements IChatBoxViewComponent {
     private CopyableTextFlow currentLineInChat = null;
 
     public ChatContainer() {
@@ -17,7 +17,7 @@ public class ChatContainer extends VBox {
 
     public void clearChat() {
         if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> clearChat());
+            Platform.runLater(this::clearChat);
             return;
         }
         getChildren().clear();
@@ -25,11 +25,9 @@ public class ChatContainer extends VBox {
     }
 
     public CopyableTextFlow newLineInFx(IPrintFunction printFunction, int chatMessageIndex) {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 5");
-        }
+        assertFxThread();
         if (!getChildren().isEmpty()) {
-            int previousMessageIndex = ((CopyableTextFlow) getChildren().get(0)).getChatMessageIndex();
+            int previousMessageIndex = ((CopyableTextFlow) getChildren().getFirst()).getChatMessageIndex();
             if (previousMessageIndex > chatMessageIndex)
                 throw new RuntimeException("The previous message index " + previousMessageIndex + " is bigger than the actual one");
         }
@@ -42,18 +40,14 @@ public class ChatContainer extends VBox {
     }
 
     public CopyableTextFlow currentLine(IPrintFunction printFunction, int chatMessageIndex) {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 5");
-        }
+        assertFxThread();
         if (currentLineInChat == null)
             return newLineInFx(printFunction, chatMessageIndex);
         return currentLineInChat;
     }
 
     public void appendToLastText(String space) {
-        if (!Platform.isFxApplicationThread()) {
-            System.err.println("NOT APPLICATION THREAD 5");
-        }
+        assertFxThread();
         if (currentLineInChat == null)
             return;
         currentLineInChat.appendToLastText(space);

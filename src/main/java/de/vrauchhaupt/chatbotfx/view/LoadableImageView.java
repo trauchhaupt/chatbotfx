@@ -29,11 +29,11 @@ import java.nio.file.Path;
 public class LoadableImageView extends StackPane {
 
     private Path representingImageFile = null;
-    private ImageView imageView = new ImageView();
-    private MenuItem menuItemRemove = new MenuItem("Delete");
-    private MenuItem menuItemEnlarge = new MenuItem("Enlarge");
-    private MenuItem menuItemSetAsModelImage = new MenuItem("Model Image");
-    private ContextMenu contextMenu = new ContextMenu(menuItemRemove,
+    private final ImageView imageView = new ImageView();
+    private final MenuItem menuItemRemove = new MenuItem("Delete");
+    private final MenuItem menuItemEnlarge = new MenuItem("Enlarge");
+    private final MenuItem menuItemSetAsModelImage = new MenuItem("Model Image");
+    private final ContextMenu contextMenu = new ContextMenu(menuItemRemove,
             menuItemEnlarge,
             menuItemSetAsModelImage);
 

@@ -15,10 +15,12 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 
 public class PiperManager extends AbstractManager {
     private static PiperManager INSTANCE = null;
@@ -53,13 +55,16 @@ public class PiperManager extends AbstractManager {
             ttsModels.clear();
             return;
         }
-        try {
-            List<Path> modelConfigs = Files.list(SettingsManager.instance().getPathToTtsModelFiles())
-                    .filter(x -> x.toString().endsWith(".onnx.json"))
-                    .toList();
-            List<Path> modelFiles = Files.list(SettingsManager.instance().getPathToTtsModelFiles())
-                    .filter(x -> x.toString().endsWith(".onnx"))
-                    .toList();
+        try (Stream<Path> fileList = Files.list(SettingsManager.instance().getPathToTtsModelFiles())) {
+            List<Path> modelConfigs = new ArrayList<>();
+            List<Path> modelFiles = new ArrayList<>();
+            fileList.forEach(x -> {
+                if (x.toString().endsWith(".onnx.json"))
+                    modelConfigs.add(x);
+                else if (x.toString().endsWith(".onnx"))
+                    modelFiles.add(x);
+            });
+
             List<String> foundModels = new LinkedList<>();
             for (Path modelFile : modelFiles) {
                 String modelFileName = modelFile.getFileName().toString();
@@ -81,6 +86,8 @@ public class PiperManager extends AbstractManager {
         while (!queueOfTextsToPlay.isEmpty()) {
             isPlayingSound.set(true);
             TtsSentence sentenceToPlay = queueOfTextsToPlay.poll();
+            if (sentenceToPlay == null)
+                continue;
             try (InputStream rawSoundIs = sentenceToPlay.getBytesAsInputStream()) {
                 AudioFormat audioFormat = new AudioFormat(22000, 16, 1, true, false);
                 SourceDataLine line = AudioSystem.getSourceDataLine(audioFormat);
@@ -148,7 +155,7 @@ public class PiperManager extends AbstractManager {
         LlmModelCardJson selectedLlModelCard = LlmModelCardManager.instance().getSelectedLlModelCard();
         final String ttsModel;
         if (selectedLlModelCard == null || !ttsModels.contains(selectedLlModelCard.getTtsModel())) {
-            ttsModel = ttsModels.get(0);
+            ttsModel = ttsModels.getFirst();
         } else
             ttsModel = selectedLlModelCard.getTtsModel();
 
@@ -162,7 +169,7 @@ public class PiperManager extends AbstractManager {
             queueOfTextsToPlay.add(ttsSentence);
             currentThreads.add(ThreadManager.instance().startThread("Piper Execution",
                     () -> startPiperCommand(command, ttsSentence),
-                    x -> currentThreads.remove(x)));
+                    currentThreads::remove));
         }
     }
 
@@ -174,7 +181,7 @@ public class PiperManager extends AbstractManager {
 
             Thread voiceCollectorThread = ThreadManager.instance().startThread("Piper voice collector",
                     () -> collectVoices(piperProcess, ttsSentence),
-                    x -> currentThreads.remove(x));
+                    currentThreads::remove);
             currentThreads.add(voiceCollectorThread);
 
             try (OutputStream outputStream = piperProcess.getOutputStream()) {

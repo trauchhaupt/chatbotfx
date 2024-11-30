@@ -15,6 +15,7 @@
                 <Menu fx:id="menuSettings" text="Settings">
                     <MenuItem fx:id="menuItemBaseSettings" text="Base Settings"/>
                     <MenuItem fx:id="menuItemReloadModels" text="Reload Models"/>
+                    <CheckMenuItem fx:id="chechMenuItemAutoScroll" text="Autoscroll" selected="true" />
                 </Menu>
                 <Menu text="AI Features">
                     <CheckMenuItem fx:id="menuItemTts" text="Text to Speech (TTS)" />

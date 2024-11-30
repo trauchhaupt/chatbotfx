@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class SettingsWindow {
 
@@ -130,33 +131,25 @@ public class SettingsWindow {
     }
 
     private void invisibleIfNoText(Label labelWarning) {
-        labelWarning.textProperty().addListener((obs, oldV, newV) -> {
-            invisibleIfNoTextInternal(labelWarning, newV);
-        });
+        labelWarning.textProperty().addListener((obs, oldV, newV) -> invisibleIfNoTextInternal(labelWarning, newV));
         invisibleIfNoTextInternal(labelWarning, labelWarning.getText());
     }
 
     private void invisibleIfNoTextInternal(Label labelWarning, String newV) {
         labelWarning.setStyle("-fx-text-fill: red");
-        if (newV == null || newV.isEmpty()) {
-            labelWarning.setVisible(false);
-            //labelWarning.setManaged(false);
-        } else {
-            labelWarning.setVisible(true);
-            //labelWarning.setManaged(true);
-        }
+        labelWarning.setVisible(newV != null && !newV.isEmpty());
         checkButtonSaveState();
     }
 
-    private boolean validateDirectoryExists(TextField textFieldPath, Label labelWarning, Predicate<Path> checkOnDirectoryFiles, String fileToSearchDescription) {
+    private void validateDirectoryExists(TextField textFieldPath, Label labelWarning, Predicate<Path> checkOnDirectoryFiles, String fileToSearchDescription) {
         if (textFieldPathToLlmModelFiles.getText() == null || textFieldPathToLlmModelFiles.getText().isEmpty()) {
             labelWarning.setText("The path must be set");
-            return false;
+            return;
         }
         Path path = new File(textFieldPath.getText()).toPath();
         if (!Files.exists(path)) {
             labelWarning.setText("The path does not exist");
-            return false;
+            return;
         }
 
         if (!Files.isDirectory(path)) {
@@ -164,17 +157,16 @@ public class SettingsWindow {
             textFieldPath.setText(path.toAbsolutePath().toString());
         }
 
-        try {
-            if (!Files.list(path).anyMatch(checkOnDirectoryFiles)) {
+        try (Stream<Path> fileList = Files.list(path)) {
+            if (!fileList.anyMatch(checkOnDirectoryFiles)) {
                 labelWarning.setText("The directory does not contain any valid file (" + fileToSearchDescription + ")");
-                return false;
+                return;
             }
         } catch (IOException e) {
             labelWarning.setText(e.getMessage());
-            return false;
+            return;
         }
         labelWarning.setText("");
-        return true;
     }
 
     private void isWebuiForgeHostValid() {
@@ -260,7 +252,8 @@ public class SettingsWindow {
         try {
             int amountOfMessages = Integer.parseInt(textFieldStripMessagesForLlm.getText());
             SettingsManager.instance().setMessagesToStripForLLM(amountOfMessages);
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException ignore) {
+            // intentionally do not react on this, then the input is invalid
         }
         SettingsManager.instance().setWebuiForgeHost(textFieldUrlToWebuiForgeHost.getText());
         SettingsManager.instance().setOllamaHost(textFieldUrlToOllamaHost.getText());

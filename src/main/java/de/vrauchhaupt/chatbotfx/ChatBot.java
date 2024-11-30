@@ -19,7 +19,6 @@ import java.net.URL;
 
 public class ChatBot extends Application {
 
-    public static ChatViewModel chatViewModel = null;
     public static ChatMainWindow chatMainWindow = null;
     public static Parent mainWindowNode = null;
     public static Stage mainStage = null;
