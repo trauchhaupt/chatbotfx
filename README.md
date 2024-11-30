@@ -45,6 +45,7 @@ You need the following preparation:
     "txt2ImgModelStyle" : "",
     "ttsModel" : "en_GB-cori-high"
     }
+  * Also you can add a image file (.png) of the dimensions 528x768 pixels with the same base file name like the model name.
 * Now start the chatbot
   * A window will start up, where all the dictionaries, mentioned above are, must be set.
   * It is also tested, that Ollama and webui-forge is up and running
