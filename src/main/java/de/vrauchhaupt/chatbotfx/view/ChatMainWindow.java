@@ -402,7 +402,7 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         final String curUserPrompt = (textFieldUserInput.getText() == null ? "" : textFieldUserInput.getText()).trim();
         String tmpSystemPromptForImage = curSystemPrompt;
         if (tmpSystemPromptForImage.isEmpty() && ChatViewModel.instance().getFullHistory().isEmpty())
-            tmpSystemPromptForImage = LlmModelCardManager.instance().getSelectedLlModelCard().getSystem();
+            tmpSystemPromptForImage = LlmModelCardManager.instance().getSelectedLlModelCard().getSystem().replace("${NAME}", LlmModelCardManager.instance().getSelectedLlModelCard().getModelCardName());
 
         if (!tmpSystemPromptForImage.isEmpty()) {
             renderOnFxThread(DisplayRole.SYSTEM, tmpSystemPromptForImage, IndexedOllamaChatMessage.newId());

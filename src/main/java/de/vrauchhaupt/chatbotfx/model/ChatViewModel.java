@@ -68,7 +68,7 @@ public class ChatViewModel implements IMessaging {
         LlmModelCardJson selectedLlModelCard = LlmModelCardManager.instance().getSelectedLlModelCard();
         if (trimmedHistory().isEmpty())
             OllamaManager.instance().systemNoticeAndAsk(
-                    selectedLlModelCard.getSystem(),
+                    selectedLlModelCard.getSystem().replace("${NAME}", selectedLlModelCard.getModelCardName()),
                     userPrompt,
                     trimmedHistory(),
                     selectedLlModelCard,
