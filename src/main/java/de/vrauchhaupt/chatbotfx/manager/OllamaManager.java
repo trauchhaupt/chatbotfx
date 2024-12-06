@@ -96,7 +96,8 @@ public class OllamaManager extends AbstractManager {
                 .setTemperature(model.getTemperature())
                 .setTopP(model.getTop_p())
                 .setTopK(model.getTop_k())
-                .setRepeatPenalty(1.9f)
+                .setRepeatPenalty(1.3f)
+                .setRepeatLastN(128)
                 .build();
 
         OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model.getLlmModel());
