@@ -132,16 +132,6 @@ public class PiperManager extends AbstractManager {
     public void cancelWork() {
         queueOfTextsToProduce.clear();
         queueOfTextsToPlay.clear();
-        for (Thread currentThread : currentThreads) {
-            if (!currentThread.isAlive())
-                continue;
-            try {
-                currentThread.interrupt();
-            } catch (Exception e) {
-                System.err.println("Could not interrupt thread in pipermananger '" + currentThread.getName() + "'");
-                e.printStackTrace();
-            }
-        }
     }
 
     private void generateTTS(ControlledThread thread) {
@@ -216,8 +206,10 @@ public class PiperManager extends AbstractManager {
     }
 
     public void fileSentence(TtsSentence ttsSentence) {
-        if (!SettingsManager.instance().isTtsGeneration())
+        if (!SettingsManager.instance().isTtsGeneration()) {
+            ttsSentence.informSpoken();
             return;
+        }
         queueOfTextsToProduce.add(ttsSentence);
         logLn("Adding to TTSQ '" + ttsSentence.getText() + "'");
     }
