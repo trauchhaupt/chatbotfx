@@ -172,7 +172,7 @@ public class ChatViewModel implements IMessaging {
         filesToCopy.sort(Comparator.comparing(Path::getFileName));
         for (Path path : filesToCopy) {
             try {
-                printer.addImage(getCurImageIndex(), Files.readAllBytes(path), null);
+                printer.addImage(getCurImageIndex(), Files.readAllBytes(path), path, null);
                 increaseCurImageIndex();
             } catch (IOException e) {
                 throw new RuntimeException("Could not read image bytes from " + path.toAbsolutePath(), e);

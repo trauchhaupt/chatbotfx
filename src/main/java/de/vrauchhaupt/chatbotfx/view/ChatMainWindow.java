@@ -247,7 +247,10 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         Path path = modelCardsDirectory.resolve(selectedLlModelCard.getModelCardName() + ".png");
         if (Files.exists(path)) {
             try {
-                addImage(ChatViewModel.instance().getCurImageIndex(), Files.readAllBytes(path), null);
+                addImage(ChatViewModel.instance().getCurImageIndex(),
+                        Files.readAllBytes(path),
+                        null, // file shall not be deleted
+                        selectedLlModelCard.getSystem());
                 ChatViewModel.instance().increaseCurImageIndex();
             } catch (IOException e) {
                 exceptionHappend("Could not read image bytes from " + path.toAbsolutePath(), e);
@@ -356,9 +359,9 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
     }
 
     @Override
-    public synchronized void addImage(int index, byte[] imageBytes, Path imageFile) {
+    public synchronized void addImage(int index, byte[] imageBytes, Path imageFile, String tooltip) {
         if (!Platform.isFxApplicationThread()) {
-            Platform.runLater(() -> addImage(index, imageBytes, imageFile));
+            Platform.runLater(() -> addImage(index, imageBytes, imageFile, tooltip));
             return;
         }
 
@@ -375,6 +378,11 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
             imageView.setId("image_" + index);
             containerImages.getChildren().add(imageView);
         }
+        if (tooltip != null) {
+            Tooltip tooltipOverlay = new Tooltip(tooltip);
+            tooltipOverlay.setMaxWidth(600);
+            Tooltip.install(imageView, tooltipOverlay);
+        }
 
         try (ByteArrayInputStream bis = new ByteArrayInputStream(imageBytes)) {
             imageView.setImage(new Image(bis), imageFile);
@@ -383,8 +391,7 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         }
     }
 
-    private void exceptionHappend (String errorMsgForUser, Exception e)
-    {
+    private void exceptionHappend(String errorMsgForUser, Exception e) {
         e.printStackTrace();
         renderOnFxThread(DisplayRole.TOOL, errorMsgForUser + ", because of " + e.getMessage(), -1);
     }

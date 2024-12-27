@@ -9,7 +9,7 @@ public interface IPrintFunction {
 
     void renderNewLine(int chatMessageIndex);
 
-    void addImage(int index, byte[] imageBytes, Path imageFile);
+    void addImage(int index, byte[] imageBytes, Path imageFile, String tooltip);
 
     void fileNewImageRendering(String s);
 }

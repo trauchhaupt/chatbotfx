@@ -127,7 +127,7 @@ public class StableDiffusionManager extends AbstractManager {
                 Files.deleteIfExists(imageFile);
                 Files.write(imageFile, imageBytes);
 
-                imageConsumer.addImage(index, imageBytes, imageFile);
+                imageConsumer.addImage(index, imageBytes, imageFile, prompt);
                 // unload model
                 /*String unloadUrl = webuiForgeHost + "sdapi/v1/unload";
                 request = HttpRequest.newBuilder()
