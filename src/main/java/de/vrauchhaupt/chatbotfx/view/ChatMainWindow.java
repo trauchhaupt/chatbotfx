@@ -380,7 +380,8 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         }
         if (tooltip != null) {
             Tooltip tooltipOverlay = new Tooltip(tooltip);
-            tooltipOverlay.setMaxWidth(600);
+            tooltipOverlay.setMaxWidth(800);
+            tooltipOverlay.setWrapText(true);
             Tooltip.install(imageView, tooltipOverlay);
         }
 
