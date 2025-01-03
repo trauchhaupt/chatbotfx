@@ -406,8 +406,10 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         if (!SettingsManager.instance().assertAllSettingsValid())
             return;
 
-        final String curSystemPrompt = (textFieldSystemInput.getText() == null ? "" : textFieldSystemInput.getText()).trim();
-        final String curUserPrompt = (textFieldUserInput.getText() == null ? "" : textFieldUserInput.getText()).trim();
+        final String curSystemPrompt = alterInput(textFieldSystemInput.getText());
+        final String curUserPrompt = alterInput(textFieldUserInput.getText());
+
+
         String tmpSystemPromptForImage = curSystemPrompt;
         if (tmpSystemPromptForImage.isEmpty() && ChatViewModel.instance().getFullHistory().isEmpty())
             tmpSystemPromptForImage = LlmModelCardManager.instance().getSelectedLlModelCard().getSystem().replace("${NAME}", LlmModelCardManager.instance().getSelectedLlModelCard().getModelCardName());
@@ -421,6 +423,15 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
             renderOnFxThread(DisplayRole.USER, curUserPrompt, IndexedOllamaChatMessage.newId());
 
         doWithBlocking("ask AI assistant", () -> ChatViewModel.instance().ask(curSystemPrompt, curUserPrompt));
+    }
+
+    private String alterInput(String text) {
+        if (text == null)
+            return "";
+        text = text.trim();
+        text = text.replace("${NAME}", SettingsManager.instance().getSelectedLlmModelCard());
+        text = text.replace("${name}", SettingsManager.instance().getSelectedLlmModelCard());
+        return text;
     }
 
     @Override
