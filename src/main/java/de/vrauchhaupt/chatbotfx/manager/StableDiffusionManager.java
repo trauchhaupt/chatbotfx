@@ -24,8 +24,8 @@ public class StableDiffusionManager extends AbstractManager {
     public static final int GENERATED_IMAGE_WIDTH = 256;
     public static final int GENERATED_IMAGE_HEIGHT = 384;
 
-    private static final int UPSCALED_GENERATED_IMAGE_WIDTH = 2 * GENERATED_IMAGE_WIDTH;
-    private static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 2 * GENERATED_IMAGE_HEIGHT;
+    public static final int UPSCALED_GENERATED_IMAGE_WIDTH = 2 * GENERATED_IMAGE_WIDTH;
+    public static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 2 * GENERATED_IMAGE_HEIGHT;
 
     private static StableDiffusionManager INSTANCE = null;
 
@@ -72,28 +72,39 @@ public class StableDiffusionManager extends AbstractManager {
 
     }
 
-    private void renderWithPromptInternally(int index, LlmModelCardJson modelCardJson, String prompt, IPrintFunction imageConsumer) {
+    private ObjectNode genPayload(String prompt, String modelName, int width, int height) {
+        ObjectNode payload = JsonNodeFactory.instance.objectNode();
+        payload.put("prompt", prompt);
+        payload.put("negative_promt", "low quality, blurry, bad anatomy, distorted faces, closed eyes, disorted bodies");
+        payload.put("sd_model_name", modelName);
+        payload.put("steps", 20);
+        payload.put("sampler_name", "Euler");
+        payload.put("cfg_scale", 7);
+        payload.put("width", width);
+        payload.put("height", height);
+        payload.put("enable_hr", false);
+        payload.put("restore_faces", true);
+        return payload;
+    }
+
+    public void renderWithPrompt(int index,
+                                 String txt2ImgModel,
+                                 String modelCardName,
+                                 String modelStyle,
+                                 String prompt,
+                                 int width,
+                                 int height,
+                                 IPrintFunction imageConsumer) {
         try (HttpClient client = HttpClient.newHttpClient()) {
             ObjectMapper objectMapper = JsonHelper.objectMapper();
             logLn("Aquiring image # '" + index + "'");
 
-            ObjectNode payload = JsonNodeFactory.instance.objectNode();
-            payload.put("prompt", prompt);
-            payload.put("negative_promt", "low quality, blurry, bad anatomy, distorted faces, closed eyes");
-            payload.put("sd_model_name", modelCardJson.getTxt2ImgModel());
-            if (modelCardJson.getTxt2ImgModelStyle() != null && !modelCardJson.getTxt2ImgModelStyle().isEmpty()) {
+            ObjectNode payload = genPayload(prompt, txt2ImgModel, width, height);
+            if (modelStyle != null && !modelStyle.isEmpty()) {
                 ArrayNode stylesNode = objectMapper.createArrayNode();
-                stylesNode.add(modelCardJson.getTxt2ImgModelStyle());
+                stylesNode.add(modelStyle);
                 payload.put("styles", stylesNode);
             }
-            payload.put("steps", 20);
-            payload.put("sampler_name", "Euler");
-            payload.put("cfg_scale", 7);
-            payload.put("width", UPSCALED_GENERATED_IMAGE_WIDTH);
-            payload.put("height", UPSCALED_GENERATED_IMAGE_HEIGHT);
-            payload.put("enable_hr", false);
-            payload.put("restore_faces", true);
-
             String payloadString = payload.toString();
 
             String webuiForgeHost = SettingsManager.instance().getWebuiForgeHost();
@@ -123,24 +134,31 @@ public class StableDiffusionManager extends AbstractManager {
 
                 // Decode the image from Base64
                 byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                Path imageFile = SettingsManager.instance().getPathToLlmModelCards().resolve(modelCardJson.getModelCardName() + "_" + String.format("%04d", index) + ".jpg");
+                Path imageFile = SettingsManager.instance().getPathToLlmModelCards().resolve(modelCardName + "_" + String.format("%04d", index) + ".jpg");
                 Files.deleteIfExists(imageFile);
                 Files.write(imageFile, imageBytes);
 
                 imageConsumer.addImage(index, imageBytes, imageFile, prompt);
-                // unload model
-                /*String unloadUrl = webuiForgeHost + "sdapi/v1/unload";
-                request = HttpRequest.newBuilder()
-                        .uri(URI.create(unloadUrl))
-                        .POST(HttpRequest.BodyPublishers.noBody()) // No body needed
-                        .build();
-                response = client.send(request, HttpResponse.BodyHandlers.ofString());*/
             } else {
                 throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + response.body() + " - URL was ");
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate image.", e);
         }
+
+    }
+
+
+    private void renderWithPromptInternally(int index, LlmModelCardJson modelCardJson, String prompt, IPrintFunction imageConsumer) {
+        renderWithPrompt(index,
+                modelCardJson.getTxt2ImgModel(),
+                modelCardJson.getModelCardName(),
+                modelCardJson.getTxt2ImgModelStyle(),
+                prompt,
+                UPSCALED_GENERATED_IMAGE_WIDTH,
+                UPSCALED_GENERATED_IMAGE_HEIGHT,
+                imageConsumer);
+
     }
 
 

@@ -36,7 +36,7 @@ public class LlmModelCardManager extends AbstractManager {
         return INSTANCE;
     }
 
-    private void llmModelHasChanged(LlmModelCardJson newValue) {
+    public void llmModelHasChanged(LlmModelCardJson newValue) {
         if (newValue == null) {
             SettingsManager.instance().setSelectedLlmModelCard(null);
             usedLlmModel.set(null);

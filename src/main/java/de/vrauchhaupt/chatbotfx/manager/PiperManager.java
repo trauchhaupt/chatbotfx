@@ -89,7 +89,7 @@ public class PiperManager extends AbstractManager {
             if (sentenceToPlay == null)
                 continue;
             try (InputStream rawSoundIs = sentenceToPlay.getBytesAsInputStream()) {
-                AudioFormat audioFormat = new AudioFormat(22000, 16, 1, true, false);
+                AudioFormat audioFormat = new AudioFormat(23000, 16, 1, true, false);
                 SourceDataLine line = AudioSystem.getSourceDataLine(audioFormat);
                 line.open(audioFormat);
                 line.start();
