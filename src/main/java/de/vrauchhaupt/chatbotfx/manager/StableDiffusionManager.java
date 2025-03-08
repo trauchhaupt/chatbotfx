@@ -121,10 +121,11 @@ public class StableDiffusionManager extends AbstractManager {
             // Send the request and get the response
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
+            String body = response.body();
             if (response.statusCode() == 200) {
                 logLn("Image " + index + " is finished");
                 // Parse the JSON response
-                ObjectNode jsonResponse = (ObjectNode) objectMapper.readTree(response.body());
+                ObjectNode jsonResponse = (ObjectNode) objectMapper.readTree(body);
                 String base64Image = jsonResponse.get("images").get(0).asText();
 
                 // Delete old images
@@ -134,13 +135,13 @@ public class StableDiffusionManager extends AbstractManager {
 
                 // Decode the image from Base64
                 byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-                Path imageFile = SettingsManager.instance().getPathToLlmModelCards().resolve(modelCardName + "_" + String.format("%04d", index) + ".jpg");
+                Path imageFile = SettingsManager.instance().getPathToLlmModelCards().resolve(modelCardName + "_" + String.format("%04d", index) + ".png");
                 Files.deleteIfExists(imageFile);
                 Files.write(imageFile, imageBytes);
 
                 imageConsumer.addImage(index, imageBytes, imageFile, prompt);
             } else {
-                throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + response.body() + " - URL was ");
+                throw new RuntimeException("Failed to generate image. Response code: " + response.statusCode() + " - " + body + " - URL was ");
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate image.", e);
