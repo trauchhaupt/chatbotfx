@@ -12,7 +12,10 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 
 public class ChatViewModel implements IMessaging {
 
@@ -41,8 +44,7 @@ public class ChatViewModel implements IMessaging {
         return new ArrayList<>(messages);
     }
 
-    public int getFullHistorySize()
-    {
+    public int getFullHistorySize() {
         return messages.size();
     }
 
@@ -224,5 +226,12 @@ public class ChatViewModel implements IMessaging {
                 .filter(x -> messageIndexesToDelete.contains(x.getId()))
                 .toList();
         messages.removeAll(messagesToRemove);
+    }
+
+    public void replaceChatHistory(ArrayList<IndexedOllamaChatMessage> messagesToSummarize, OllamaChatMessage summarizing) {
+        IndexedOllamaChatMessage firstElement = messagesToSummarize.getFirst();
+        int firstElementIndex = messages.indexOf(firstElement);
+        messages.removeAll(messagesToSummarize);
+        messages.add(firstElementIndex, new IndexedOllamaChatMessage(firstElement.getId(), summarizing));
     }
 }

@@ -21,11 +21,11 @@ import java.util.Base64;
 
 public class StableDiffusionManager extends AbstractManager {
 
-    public static final int GENERATED_IMAGE_WIDTH = 256;
-    public static final int GENERATED_IMAGE_HEIGHT = 384;
+    public static final int GENERATED_IMAGE_WIDTH = 256; // 256
+    public static final int GENERATED_IMAGE_HEIGHT = 384; //384
 
-    public static final int UPSCALED_GENERATED_IMAGE_WIDTH = 2 * GENERATED_IMAGE_WIDTH;
-    public static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 2 * GENERATED_IMAGE_HEIGHT;
+    public static final int UPSCALED_GENERATED_IMAGE_WIDTH = 3 * GENERATED_IMAGE_WIDTH;
+    public static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 3 * GENERATED_IMAGE_HEIGHT;
 
     private static StableDiffusionManager INSTANCE = null;
 

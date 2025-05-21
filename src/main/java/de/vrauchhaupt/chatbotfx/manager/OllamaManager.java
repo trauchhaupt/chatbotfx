@@ -1,13 +1,11 @@
 package de.vrauchhaupt.chatbotfx.manager;
 
+import de.vrauchhaupt.chatbotfx.ChatBot;
 import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.IndexedOllamaChatMessage;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import io.github.ollama4j.OllamaAPI;
-import io.github.ollama4j.models.chat.OllamaChatMessageRole;
-import io.github.ollama4j.models.chat.OllamaChatRequest;
-import io.github.ollama4j.models.chat.OllamaChatRequestBuilder;
-import io.github.ollama4j.models.chat.OllamaChatResult;
+import io.github.ollama4j.models.chat.*;
 import io.github.ollama4j.models.response.Model;
 import io.github.ollama4j.utils.Options;
 import io.github.ollama4j.utils.OptionsBuilder;
@@ -80,6 +78,39 @@ public class OllamaManager extends AbstractManager {
         return models;
     }
 
+    public void summarizeHistory(List<IndexedOllamaChatMessage> messages,
+                                 LlmModelCardJson model) {
+        ArrayList<IndexedOllamaChatMessage> messagesToSummarize = new ArrayList<>(messages);
+        Options options = new OptionsBuilder()
+                .setTemperature(0)
+                .setTopP(model.getTop_p())
+                .setTopK(model.getTop_k())
+                .setRepeatPenalty(1.5f)
+                .setRepeatLastN(64)
+                .build();
+
+        OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model.getLlmModel());
+        List<OllamaChatMessage> collect = messages.stream()
+                .map(IndexedOllamaChatMessage::getChatMessage)
+                .collect(Collectors.toList());
+        collect.add(new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, "Summarize the history up to now in about 200 words."));
+        OllamaChatRequest chatRequest = builder.withMessages(collect)
+                .withOptions(options)
+                .build();
+        try {
+            OllamaChatResult chatResult = newOllamaApi().chat(chatRequest);
+            List<OllamaChatMessage> chatHistory = chatResult.getChatHistory();
+            OllamaChatMessage sumarization = chatHistory.getLast();
+            sumarization.setRole(OllamaChatMessageRole.SYSTEM);
+            logLn("Summarized to the following:\n" + sumarization);
+            messagesToSummarize.removeFirst(); // first message is always the intro
+            ChatViewModel.instance().replaceChatHistory(messagesToSummarize, sumarization);
+            ChatBot.chatMainWindow.fileNewImageRendering(sumarization.getContent());
+        } catch (Exception e) {
+            logLn("Could not summarize ", e);
+        }
+    }
+
     public void systemNoticeAndAsk(String systemNotice,
                                    String message,
                                    List<IndexedOllamaChatMessage> messages,
@@ -131,12 +162,18 @@ public class OllamaManager extends AbstractManager {
         currentAskingThread = ThreadManager.instance().startThread("Asking Ollama Thread", () -> {
                     try {
                         OllamaChatResult chat = newOllamaApi().chat(ollamaChatRequestModel, streamHandler);
-                        if ( chat.getHttpStatusCode() != 200)
-                        {
+                        if (chat.getHttpStatusCode() != 200) {
                             logLn("Error code " + chat.getHttpStatusCode() + " was given!");
                         }
                         chat.getResponse();
                         streamHandler.inputHasStopped();
+                        List<IndexedOllamaChatMessage> fullHistory = ChatViewModel.instance().getFullHistory();
+                        int messagesToStripForLLM = SettingsManager.instance().getMessagesToStripForLLM();
+                        if (fullHistory.size() > messagesToStripForLLM + 5) {
+                            ThreadManager.instance().startThread("Summarize LLM Messages",
+                                    () -> summarizeHistory(fullHistory.subList(0, messagesToStripForLLM), model),
+                                    null);
+                        }
                     } catch (InterruptedException e) {
                         logLn("Stopping asking a message");
                     } catch (Exception e) {

@@ -131,6 +131,8 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
                 scrollPaneChat.setVvalue(1.0); // Scroll to the bottom
         });
 
+        scrollPaneImages.setPrefWidth(StableDiffusionManager.GENERATED_IMAGE_WIDTH + 30);
+
         containerImages.heightProperty().addListener((observable, oldValue, newValue) -> {
             scrollPaneImages.setVvalue(1.0); // Scroll to the bottom
         });

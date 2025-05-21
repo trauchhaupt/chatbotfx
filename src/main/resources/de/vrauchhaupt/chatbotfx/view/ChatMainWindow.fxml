@@ -46,7 +46,7 @@
         </ScrollPane>
     </center>
     <right>
-        <ScrollPane fx:id="scrollPaneImages" prefWidth="280" vbarPolicy="ALWAYS">
+        <ScrollPane fx:id="scrollPaneImages" vbarPolicy="ALWAYS">
             <VBox fx:id="containerImages" fillWidth="true" spacing="3">
                 <padding>
                     <Insets top="5" left="5" right="5" bottom="15"/>
