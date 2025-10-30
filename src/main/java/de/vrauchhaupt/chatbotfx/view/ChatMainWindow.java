@@ -192,7 +192,7 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         ChatViewModel.instance().loadMessagesFromFile(this);
         for (IndexedOllamaChatMessage ollamaChatMessage : ChatViewModel.instance().getFullHistory()) {
             renderOnFxThread(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
-                    ollamaChatMessage.getChatMessage().getContent(),
+                    ollamaChatMessage.getChatMessage().getResponse(),
                     ollamaChatMessage.getId());
             renderNewLine(ollamaChatMessage.getId());
         }
@@ -438,6 +438,8 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
 
     @Override
     public void fileNewImageRendering(String tmpSystemPromptForImage) {
+        if (!SettingsManager.instance().isText2ImageGeneration())
+            return;
         if (!Platform.isFxApplicationThread()) {
             Platform.runLater(() -> fileNewImageRendering(tmpSystemPromptForImage));
             return;

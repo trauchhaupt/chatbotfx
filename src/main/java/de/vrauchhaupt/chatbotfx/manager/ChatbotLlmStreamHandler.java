@@ -2,12 +2,13 @@ package de.vrauchhaupt.chatbotfx.manager;
 
 import de.vrauchhaupt.chatbotfx.IMessaging;
 import de.vrauchhaupt.chatbotfx.model.TtsSentence;
-import io.github.ollama4j.models.generate.OllamaStreamHandler;
+import io.github.ollama4j.models.chat.OllamaChatResponseModel;
+import io.github.ollama4j.models.chat.OllamaChatTokenHandler;
 import org.jsoup.Jsoup;
 
 import java.util.List;
 
-public class ChatbotLlmStreamHandler implements OllamaStreamHandler, IMessaging {
+public class ChatbotLlmStreamHandler implements IMessaging, OllamaChatTokenHandler {
 
     private static final List<String> sentenceEndings = List.of(
             ".", ";", "!", "?",
@@ -16,6 +17,8 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler, IMessaging 
     private String lastSentences = "";
     private int chatMessageIndex;
 
+    public ChatbotLlmStreamHandler() {
+    }
 
     public ChatbotLlmStreamHandler setChatMessageIndex(int chatMessageIndex) {
         this.chatMessageIndex = chatMessageIndex;
@@ -44,9 +47,15 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler, IMessaging 
         return returnValue;
     }
 
+
+    public void inputHasStopped() {
+        lastSentences = "";
+    }
+
     @Override
-    public void accept(String message) {
-        String trimmedMessage = message.trim();
+    public void accept(OllamaChatResponseModel responseModel) {
+        String message = responseModel.getMessage().getResponse();
+        String trimmedMessage = message;
         String matchedEnding = sentenceEndings.stream()
                 .filter(trimmedMessage::endsWith)
                 .findFirst()
@@ -59,9 +68,5 @@ public class ChatbotLlmStreamHandler implements OllamaStreamHandler, IMessaging 
             appendAnswer(curSentence);
             lastSentences = message;
         }
-    }
-
-    public void inputHasStopped() {
-        lastSentences = "";
     }
 }

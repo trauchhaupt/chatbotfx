@@ -253,8 +253,8 @@ public class SettingsManager extends AbstractManager {
             return false;
         }
         if (!StableDiffusionManager.instance().checkWebUiForgeIsRunning()) {
+            text2ImageGeneration.set(false);
             System.err.println("WebUI Forge is not up and running");
-            return false;
         }
         if (!LlmModelCardManager.instance().checkIfLlmModelFilesExist()) {
             System.err.println("No LLM Model Files can be found");

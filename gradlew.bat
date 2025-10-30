@@ -39,30 +39,30 @@ for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 
 @rem Find java.exe
-if defined JAVA21_HOME goto findJavaFromJavaHome
+if defined JAVA25_HOME goto findJavaFromJavaHome
 
 set JAVA_EXE=java.exe
 %JAVA_EXE% -version >NUL 2>&1
 if %ERRORLEVEL% equ 0 goto execute
 
 echo. 1>&2
-echo ERROR: JAVA21_HOME is not set and no 'java' command could be found in your PATH. 1>&2
+echo ERROR: JAVA25_HOME is not set and no 'java' command could be found in your PATH. 1>&2
 echo. 1>&2
-echo Please set the JAVA21_HOME variable in your environment to match the 1>&2
+echo Please set the JAVA25_HOME variable in your environment to match the 1>&2
 echo location of your Java installation. 1>&2
 
 goto fail
 
 :findJavaFromJavaHome
-set JAVA21_HOME=%JAVA21_HOME:"=%
-set JAVA_EXE=%JAVA21_HOME%/bin/java.exe
+set JAVA25_HOME=%JAVA25_HOME:"=%
+set JAVA_EXE=%JAVA25_HOME%/bin/java.exe
 
 if exist "%JAVA_EXE%" goto execute
 
 echo. 1>&2
-echo ERROR: JAVA21_HOME is set to an invalid directory: %JAVA21_HOME% 1>&2
+echo ERROR: JAVA25_HOME is set to an invalid directory: %JAVA25_HOME% 1>&2
 echo. 1>&2
-echo Please set the JAVA21_HOME variable in your environment to match the 1>&2
+echo Please set the JAVA25_HOME variable in your environment to match the 1>&2
 echo location of your Java installation. 1>&2
 
 goto fail

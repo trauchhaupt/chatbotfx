@@ -6,8 +6,11 @@ import de.vrauchhaupt.chatbotfx.model.ChatMessageHelper;
 import de.vrauchhaupt.chatbotfx.model.DisplayRole;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import de.vrauchhaupt.chatbotfx.model.SceneJson;
-import io.github.ollama4j.OllamaAPI;
-import io.github.ollama4j.models.chat.*;
+import io.github.ollama4j.Ollama;
+import io.github.ollama4j.models.chat.OllamaChatMessage;
+import io.github.ollama4j.models.chat.OllamaChatMessageRole;
+import io.github.ollama4j.models.chat.OllamaChatRequest;
+import io.github.ollama4j.models.chat.OllamaChatResult;
 import io.github.ollama4j.utils.Options;
 import io.github.ollama4j.utils.OptionsBuilder;
 
@@ -32,12 +35,11 @@ public abstract class AbstractProgram implements IPrintFunction {
 
     protected static final long OLLAMA_TIMEOUT = 3600L;
     protected static int imageIndex = 0;
+    protected static Ollama ollamaAPI = new Ollama(SettingsManager.instance().getOllamaHost());
     private static Class<? extends AbstractProgram> programClazz = null;
     private static PrintWriter logWriter = null;
     private static DateFormat dateFormat = DateFormat.getTimeInstance(DateFormat.MEDIUM);
     protected Map<Integer, Path> IMAGE_INDEX = new HashMap<>();
-    protected static OllamaAPI ollamaAPI = new OllamaAPI(SettingsManager.instance().getOllamaHost());
-
 
     private static void stdoutBlock(String myString) {
         char[] chars = myString.toCharArray();
@@ -94,15 +96,14 @@ public abstract class AbstractProgram implements IPrintFunction {
     public static String createTxt2ImagePrompt(SceneJson sceneJson,
                                                LlmModelCardJson curModel,
                                                List<OllamaChatMessage> chatHistory) throws Exception {
-        List<OllamaChatMessage> newHistory = ChatMessageHelper.limitToMaxAmout(sceneJson,curModel, chatHistory, 5);
+        List<OllamaChatMessage> newHistory = ChatMessageHelper.limitToMaxAmout(sceneJson, curModel, chatHistory, 5);
         newHistory.add(new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, "Create an AI prompt of not more than 150 words. It shall be used to create a picture for the previous storyline. Do not retell or develop the story further. Simply describe the people and the scene"));
 
-        OllamaChatRequest chatRequest = OllamaChatRequestBuilder.getInstance(curModel.getLlmModel())
+        OllamaChatRequest chatRequest = new OllamaChatRequest(curModel.getLlmModel(), false, newHistory)
                 .withOptions(options)
-                .withMessages(newHistory)
-                .build();
-        OllamaChatResult chat = ollamaAPI.chat(chatRequest);
-        String response = chat.getResponse();
+                .withMessages(newHistory);
+        OllamaChatResult chat = ollamaAPI.chat(chatRequest, null);
+        String response = chat.getResponseModel().getMessage().getResponse();
         log(response);
         return response;
     }
@@ -111,7 +112,6 @@ public abstract class AbstractProgram implements IPrintFunction {
     protected static void initAndRun(Class<? extends AbstractProgram> programClazz) {
         SettingsManager.instance().loadFromConfigFile();
         AbstractProgram.programClazz = programClazz;
-        ollamaAPI.setVerbose(false);
         ollamaAPI.setRequestTimeoutSeconds(OLLAMA_TIMEOUT);
         File loggingFile = new File(programClazz.getSimpleName() + ".log");
         try (FileOutputStream logOutputStream = new FileOutputStream(loggingFile);

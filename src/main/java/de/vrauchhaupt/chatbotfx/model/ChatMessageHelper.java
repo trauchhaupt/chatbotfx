@@ -8,7 +8,7 @@ import java.util.List;
 public class ChatMessageHelper {
     public static OllamaChatMessage createReplacedChatMessage(OllamaChatMessage original,
                                                               LlmModelCardJson curModel) {
-        return new OllamaChatMessage(original.getRole(), createReplacedString(original.getContent(), curModel));
+        return new OllamaChatMessage(original.getRole(), createReplacedString(original.getResponse(), curModel));
     }
 
     public static String createReplacedString(String original, LlmModelCardJson curModel) {

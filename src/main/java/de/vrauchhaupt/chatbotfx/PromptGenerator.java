@@ -5,11 +5,10 @@ import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.DisplayRole;
 import de.vrauchhaupt.chatbotfx.model.IndexedOllamaChatMessage;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
-import io.github.ollama4j.OllamaAPI;
-import io.github.ollama4j.exceptions.OllamaBaseException;
-import io.github.ollama4j.models.chat.OllamaChatMessage;
+import io.github.ollama4j.Ollama;
+import io.github.ollama4j.exceptions.OllamaException;
 import io.github.ollama4j.models.chat.OllamaChatMessageRole;
-import io.github.ollama4j.models.chat.OllamaChatRequestBuilder;
+import io.github.ollama4j.models.chat.OllamaChatRequest;
 import io.github.ollama4j.models.chat.OllamaChatResult;
 import io.github.ollama4j.models.response.Model;
 import io.github.ollama4j.utils.Options;
@@ -36,7 +35,7 @@ public class PromptGenerator implements IPrintFunction {
         }
     }
 
-    private void run() throws OllamaBaseException, IOException, InterruptedException {
+    private void run() throws OllamaException, IOException, InterruptedException {
         SettingsManager.instance().loadFromConfigFile();
         Options options = new OptionsBuilder()
                 .setTemperature(1.3f)
@@ -78,26 +77,20 @@ public class PromptGenerator implements IPrintFunction {
                         story.append("\n")
                                 .append(indexedOllamaChatMessage.getChatMessage().getRole().getRoleName())
                                 .append(": \"")
-                                .append(indexedOllamaChatMessage.getChatMessage().getContent())
+                                .append(indexedOllamaChatMessage.getChatMessage().getResponse())
                                 .append("\"");
                         if (i++ > maxMessages)
                             break;
                     }
-                    OllamaChatRequestBuilder builder = OllamaChatRequestBuilder.getInstance(model);
                     String imgPrompt = "A scene of people. The people are all 30 years or above:\n" + story;
-
-                    OllamaChatMessage chatMessage = new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, imgPrompt);
-                    OllamaChatRequestBuilder ollamaChatRequestBuilder = builder.withMessages(new ArrayList<>(List.of(chatMessage)));
-                    OllamaAPI ollamaAPI = new OllamaAPI(SettingsManager.instance().getOllamaHost());
-                    ollamaAPI.setVerbose(false);
-                    ollamaAPI.setRequestTimeoutSeconds(1200L);
-                    List<OllamaChatMessage> messages = ollamaChatRequestBuilder
+                    OllamaChatRequest chatRequest = new OllamaChatRequest(model, false, new ArrayList<>())
                             .withOptions(options)
-                            .build()
-                            .getMessages();
-                    OllamaChatResult chat = ollamaAPI.chat(model, messages);
+                            .withMessage(OllamaChatMessageRole.SYSTEM, imgPrompt);
+                    Ollama ollamaAPI = new Ollama(SettingsManager.instance().getOllamaHost());
+                    ollamaAPI.setRequestTimeoutSeconds(1200L);
+                    OllamaChatResult chat = ollamaAPI.chat(chatRequest, null);
 
-                    String createdPrompt = chat.getResponse();
+                    String createdPrompt = chat.getResponseModel().getMessage().getResponse();
                     createdPrompt = createdPrompt.replace("\n\n", "\n");
                     System.out.println(createdPrompt);
                     System.out.println("--------------------------------------------------------------");

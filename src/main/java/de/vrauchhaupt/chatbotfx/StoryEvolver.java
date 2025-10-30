@@ -9,7 +9,6 @@ import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import de.vrauchhaupt.chatbotfx.model.SceneJson;
 import io.github.ollama4j.models.chat.OllamaChatMessage;
 import io.github.ollama4j.models.chat.OllamaChatRequest;
-import io.github.ollama4j.models.chat.OllamaChatRequestBuilder;
 import io.github.ollama4j.models.chat.OllamaChatResult;
 
 import java.nio.file.Files;
@@ -80,24 +79,24 @@ public class StoryEvolver extends AbstractProgram {
             OllamaChatMessage promptToWork = ChatMessageHelper.createReplacedChatMessage(scene.getMessages().get(iPrompt), curModel);
             log("#### Prompt " + iPrompt);
             Date startDate = logStart();
-            log(promptToWork.getRole() + " : " + promptToWork.getContent());
+            log(promptToWork.getRole() + " : " + promptToWork.getResponse());
             history.add(promptToWork);
 
-            OllamaChatRequest chatRequest = OllamaChatRequestBuilder.getInstance(curModel.getLlmModel())
-                    .withMessages(history)
-                    .withOptions(options)
-                    .build();
+            OllamaChatRequest chatRequest = new OllamaChatRequest(curModel.getLlmModel(), false, history)
+                    .withUseTools(false)
+                    .withOptions(options);
+
 
             OllamaChatResult chat = null;
             try {
-                chat = ollamaAPI.chat(chatRequest);
+                chat = ollamaAPI.chat(chatRequest, null);
             } catch (Exception e) {
                 log("Failed to chat with AI");
                 log(e);
                 continue;
             }
             log("#### Answer");
-            log(chat.getResponse());
+            log(chat.getResponseModel().getMessage().getResponse());
             long duration = logEnd(startDate);
             llmDurationTotal.put(curModel, llmDurationTotal.computeIfAbsent(curModel, x -> 0L) + duration);
             history = new ArrayList<>(chat.getChatHistory());

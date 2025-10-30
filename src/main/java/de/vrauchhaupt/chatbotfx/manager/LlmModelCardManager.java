@@ -47,7 +47,7 @@ public class LlmModelCardManager extends AbstractManager {
                 SettingsManager.instance().setSelectedLlmModelCard(newValue.getModelCardName());
             } else {
                 Map.Entry<String, Path> llmModelFileForModelCard = findLlmModelFileForModelCard(newValue);
-                OllamaManager.instance().loadModel(newValue, llmModelFileForModelCard, x -> {
+                OllamaManager.instance().loadModel(newValue, x -> {
                             availableLlmOllamaModels = null;
                             Model tmpLlmModelForModelCard = findLlmModelForModelCard(newValue);
                             if (tmpLlmModelForModelCard == null) {
@@ -190,7 +190,7 @@ public class LlmModelCardManager extends AbstractManager {
                 .orElse(null);
     }
 
-    private Map.Entry<String, Path> findLlmModelFileForModelCard(LlmModelCardJson modelCardJson) {
+    public Map.Entry<String, Path> findLlmModelFileForModelCard(LlmModelCardJson modelCardJson) {
         if (modelCardJson == null)
             return null;
         return getAvailableLlmModelFiles().entrySet()

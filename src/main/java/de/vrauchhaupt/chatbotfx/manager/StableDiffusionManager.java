@@ -25,7 +25,7 @@ public class StableDiffusionManager extends AbstractManager {
     public static final int GENERATED_IMAGE_HEIGHT = 384; //384
 
     public static final int UPSCALED_GENERATED_IMAGE_WIDTH = 3 * GENERATED_IMAGE_WIDTH;
-    public static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 3 * GENERATED_IMAGE_HEIGHT;
+    public static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 3 * GENERATED_IMAGE_WIDTH;
 
     private static StableDiffusionManager INSTANCE = null;
 

@@ -62,14 +62,14 @@ public class SceneJson extends AbstractJson {
         int iNumber = 1;
         for (PersonJson person : persons) {
             personsPrompt.append("\n")
-                    .append(iNumber)
+                    .append(iNumber++)
                     .append(". ")
                     .append(ChatMessageHelper.createReplacedString(person.getName(), curModel))
                     .append(":")
                     .append(ChatMessageHelper.createReplacedString(person.getDescription(), curModel));
         }
 
-        return List.of(new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, "Scene: " + description),
-                new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, personsPrompt.toString()));
+        return List.of(new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, personsPrompt.toString()),
+                new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, "Scene: " + ChatMessageHelper.createReplacedString(description, curModel)));
     }
 }

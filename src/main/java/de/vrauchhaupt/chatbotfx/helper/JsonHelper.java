@@ -3,7 +3,7 @@ package de.vrauchhaupt.chatbotfx.helper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import io.github.ollama4j.utils.Utils;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.IOException;
@@ -11,10 +11,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public class JsonHelper {
+    private static ObjectMapper objectMapper;
 
     @NotNull
     public static ObjectMapper objectMapper() {
-        return Utils.getObjectMapper();
+        if (objectMapper == null) {
+            objectMapper = new ObjectMapper();
+            objectMapper.registerModule(new JavaTimeModule());
+        }
+
+        return objectMapper;
     }
 
     @NotNull

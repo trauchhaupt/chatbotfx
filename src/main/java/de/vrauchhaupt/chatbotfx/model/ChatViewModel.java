@@ -52,8 +52,10 @@ public class ChatViewModel implements IMessaging {
         List<IndexedOllamaChatMessage> returnValue = new ArrayList<>();
         if (messages.isEmpty())
             return returnValue;
-        if (SettingsManager.instance().getMessagesToStripForLLM() <= 0 ||
-                messages.size() <= SettingsManager.instance().getMessagesToStripForLLM() + 1)
+
+        returnValue.addAll(messages);
+        /*if (SettingsManager.instance().getMessagesToStripForLLM() <= 0 ||
+                messages.size() <= SettingsManager.instance().getMessagesToStripForLLM() + 14)
             returnValue.addAll(messages);
         else {
             IndexedOllamaChatMessage firstMessage = messages.getFirst(); // if it is a system (what should be, this is important)
@@ -61,7 +63,7 @@ public class ChatViewModel implements IMessaging {
                 returnValue.add(firstMessage);
             }
             returnValue.addAll(messages.subList(Math.max(0, messages.size() - SettingsManager.instance().getMessagesToStripForLLM()), messages.size()));
-        }
+        }*/
         return returnValue;
     }
 
@@ -158,7 +160,7 @@ public class ChatViewModel implements IMessaging {
 
         for (IndexedOllamaChatMessage ollamaChatMessage : messages) {
             printer.renderOnFxThread(DisplayRole.of(ollamaChatMessage.getChatMessage().getRole()),
-                    ollamaChatMessage.getChatMessage().getContent(),
+                    ollamaChatMessage.getChatMessage().getResponse(),
                     ollamaChatMessage.getId());
         }
 
@@ -196,13 +198,13 @@ public class ChatViewModel implements IMessaging {
 
     public void setMessageOfId(int chatMessageIndex, String newMessage) {
         messages.stream().filter(x -> x.getId() == chatMessageIndex)
-                .forEach(x -> x.getChatMessage().setContent(newMessage));
+                .forEach(x -> x.getChatMessage().setResponse(newMessage));
     }
 
     public void appendSystemOrPrompt(OllamaChatMessageRole role, String prompt) {
         OllamaChatMessage ollamaChatMessage = new OllamaChatMessage();
         ollamaChatMessage.setRole(role);
-        ollamaChatMessage.setContent(prompt);
+        ollamaChatMessage.setResponse(prompt);
         messages.add(new IndexedOllamaChatMessage(ollamaChatMessage));
     }
 
@@ -212,11 +214,11 @@ public class ChatViewModel implements IMessaging {
         if (indexedOllamaChatMessage == null) {
             OllamaChatMessage ollamaChatMessage = new OllamaChatMessage();
             ollamaChatMessage.setRole(OllamaChatMessageRole.ASSISTANT);
-            ollamaChatMessage.setContent(ttsSentence.getText());
+            ollamaChatMessage.setResponse(ttsSentence.getText());
             messages.add(new IndexedOllamaChatMessage(ttsSentence.getChatMessageIndex(), ollamaChatMessage));
         } else {
-            indexedOllamaChatMessage.getChatMessage().setContent(
-                    indexedOllamaChatMessage.getChatMessage().getContent() + " " + ttsSentence.getText()
+            indexedOllamaChatMessage.getChatMessage().setResponse(
+                    indexedOllamaChatMessage.getChatMessage().getResponse() + " " + ttsSentence.getText()
             );
         }
     }
