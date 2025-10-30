@@ -65,13 +65,14 @@ public class SettingsManager extends AbstractManager {
         return INSTANCE;
     }
 
-    public void loadFromConfigFile() {
+    public void loadFromConfigFile(boolean resetModelSelection) {
         if (!Files.exists(SETTINGS_FILE))
             saveToFile();
         SettingsJson tmpSettingsJson = JsonHelper.loadFromFile(SETTINGS_FILE, SettingsJson.class);
         if (tmpSettingsJson != null) {
             fromJsonObject(tmpSettingsJson);
-            LlmModelCardManager.instance().llmModelCardChangedInSettings();
+            if (!resetModelSelection)
+                LlmModelCardManager.instance().llmModelCardChangedInSettings();
         }
         logLn("Settings loaded");
     }
@@ -278,7 +279,7 @@ public class SettingsManager extends AbstractManager {
                 return false;
             tmpValid = checkAllSettingsValid();
         }
-        loadFromConfigFile();
+        loadFromConfigFile(false);
         LlmModelCardManager.instance().reloadModelCards();
         return true;
     }

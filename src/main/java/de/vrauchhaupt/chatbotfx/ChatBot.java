@@ -48,7 +48,7 @@ public class ChatBot extends Application {
             addImageToPrimaryStage(primaryStage, "icon_48.png");
             addImageToPrimaryStage(primaryStage, "icon_512.png");
 
-            SettingsManager.instance().loadFromConfigFile();
+            SettingsManager.instance().loadFromConfigFile(false);
 
             URL resource = getClass().getResource("/de/vrauchhaupt/chatbotfx/view/ChatMainWindow.fxml");
             FXMLLoader loader = new FXMLLoader(resource);

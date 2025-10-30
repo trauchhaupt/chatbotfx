@@ -5,7 +5,6 @@ import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.DisplayRole;
 import de.vrauchhaupt.chatbotfx.model.IndexedOllamaChatMessage;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
-import io.github.ollama4j.Ollama;
 import io.github.ollama4j.exceptions.OllamaException;
 import io.github.ollama4j.models.chat.OllamaChatMessageRole;
 import io.github.ollama4j.models.chat.OllamaChatRequest;
@@ -36,7 +35,7 @@ public class PromptGenerator implements IPrintFunction {
     }
 
     private void run() throws OllamaException, IOException, InterruptedException {
-        SettingsManager.instance().loadFromConfigFile();
+        SettingsManager.instance().loadFromConfigFile(true);
         Options options = new OptionsBuilder()
                 .setTemperature(1.3f)
                 .setTopP(50)
@@ -74,9 +73,9 @@ public class PromptGenerator implements IPrintFunction {
                     StringBuilder story = new StringBuilder("Create a short description (less than 75 words) to create a picture for the following story. Do not tell the story, but describe the people and the scene so an image could be painted:");
                     int i = 0;
                     for (IndexedOllamaChatMessage indexedOllamaChatMessage : fullHistory) {
-                        story.append("\n")
-                                .append(indexedOllamaChatMessage.getChatMessage().getRole().getRoleName())
-                                .append(": \"")
+                        story.append("\n<")
+                                .append(indexedOllamaChatMessage.getChatMessage().getRole().getRoleName().toUpperCase())
+                                .append("> : \"")
                                 .append(indexedOllamaChatMessage.getChatMessage().getResponse())
                                 .append("\"");
                         if (i++ > maxMessages)
@@ -86,9 +85,7 @@ public class PromptGenerator implements IPrintFunction {
                     OllamaChatRequest chatRequest = new OllamaChatRequest(model, false, new ArrayList<>())
                             .withOptions(options)
                             .withMessage(OllamaChatMessageRole.SYSTEM, imgPrompt);
-                    Ollama ollamaAPI = new Ollama(SettingsManager.instance().getOllamaHost());
-                    ollamaAPI.setRequestTimeoutSeconds(1200L);
-                    OllamaChatResult chat = ollamaAPI.chat(chatRequest, null);
+                    OllamaChatResult chat = OllamaManager.instance().chat(chatRequest, null);
 
                     String createdPrompt = chat.getResponseModel().getMessage().getResponse();
                     createdPrompt = createdPrompt.replace("\n\n", "\n");

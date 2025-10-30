@@ -1,7 +1,6 @@
 package de.vrauchhaupt.chatbotfx;
 
 import de.vrauchhaupt.chatbotfx.helper.JsonHelper;
-import de.vrauchhaupt.chatbotfx.manager.LlmModelCardManager;
 import de.vrauchhaupt.chatbotfx.manager.OllamaManager;
 import de.vrauchhaupt.chatbotfx.manager.SettingsManager;
 import de.vrauchhaupt.chatbotfx.model.ChatMessageHelper;
@@ -13,8 +12,6 @@ import io.github.ollama4j.models.chat.OllamaChatResult;
 import io.github.ollama4j.models.response.Model;
 import org.apache.commons.io.FilenameUtils;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -32,7 +29,6 @@ public class Benchmark extends AbstractProgram {
 
     @Override
     protected void run() throws Exception {
-        SettingsManager.instance().setSelectedLlmModelCard(null);
 
         List<Path> sceneFiles = Files.list(SettingsManager.instance().getPathToLlmModelCards())
                 .filter(x -> x.toString().toLowerCase().endsWith(".scene"))
@@ -99,58 +95,46 @@ public class Benchmark extends AbstractProgram {
         log("- MODEL : " + virtualModelCard.getLlmModel());
         log("--------------------------------------------------------------");
 
-        try (FileWriter fwDebug = new FileWriter(new File(virtualModelCard.getLlmModel() + ".debug"))) {
 
-            for (int iPrompt = 0; iPrompt < scene.getMessages().size(); iPrompt++) {
-                OllamaChatMessage promptToWork = ChatMessageHelper.createReplacedChatMessage(scene.getMessages().get(iPrompt), virtualModelCard);
-                log("#### Prompt " + iPrompt);
-                Date startDate = logStart();
-                log("<" + promptToWork.getRole().getRoleName().toUpperCase() + ">: " + promptToWork.getResponse());
-                history.add(promptToWork);
+        for (int iPrompt = 0; iPrompt < scene.getMessages().size(); iPrompt++) {
+            OllamaChatMessage promptToWork = ChatMessageHelper.createReplacedChatMessage(scene.getMessages().get(iPrompt), virtualModelCard);
+            log("#### Prompt " + iPrompt);
+            Date startDate = logStart();
+            log("<" + promptToWork.getRole().getRoleName().toUpperCase() + "> : " + promptToWork.getResponse());
+            history.add(promptToWork);
 
-                fwDebug.write("\n\n" + "#### Prompt " + iPrompt + "\n");
-                fwDebug.write(history.stream()
-                        .map(x -> "<" + x.getRole().getRoleName().toUpperCase() + ">: " + x.getResponse())
-                        .collect(Collectors.joining("\n")));
+            OllamaChatRequest chatRequest = new OllamaChatRequest(virtualModelCard.getLlmModel(), false, history)
+                    .withOptions(options)
+                    .withUseTools(false)
+                    .build();
 
-                OllamaChatRequest chatRequest = new OllamaChatRequest(virtualModelCard.getLlmModel(), false, history)
-                        .withOptions(options)
-                        .withUseTools(false)
-                        .build();
-
-                OllamaChatResult chat = null;
-                try {
-                    chat = ollamaAPI.chat(chatRequest, null);
-                } catch (Exception e) {
-                    log("Failed to chat with AI");
-                    log(e);
-                    continue;
-                }
-                log("#### Answer");
-                log(chat.getResponseModel().getMessage().getResponse());
-                long duration = logEnd(startDate);
-                if (llmPromptPromptsTotal.get(virtualModelCard.getLlmModel()) == null) // first one not, as model must be loaded
-                {
-                    llmPromptPromptsTotal.put(virtualModelCard.getLlmModel(), Long.valueOf(0));
-                } else {
-                    llmPromptPromptsTotal.put(virtualModelCard.getLlmModel(), llmPromptPromptsTotal.computeIfAbsent(virtualModelCard.getLlmModel(), x -> 0L) + 1);
-                    llmPromptDurationTotal.put(virtualModelCard.getLlmModel(), llmPromptDurationTotal.computeIfAbsent(virtualModelCard.getLlmModel(), x -> 0L) + duration);
-                }
-                history = new ArrayList<>(chat.getChatHistory());
-                log("------------------------------------------------------------------------------------------------------------------------");
-                log("");
+            OllamaChatResult chat = null;
+            try {
+                chat = OllamaManager.instance().chat(chatRequest, null);
+            } catch (Exception e) {
+                log("Failed to chat with AI");
+                log(e);
+                continue;
             }
-            Long timeTotal = llmPromptDurationTotal.get(virtualModelCard.getLlmModel());
-            Long amount = llmPromptPromptsTotal.get(virtualModelCard.getLlmModel());
-
-            if (timeTotal == null || amount == null)
-                fwDebug.write("\n\n-----------------------------------------------------------------\n" +
-                        "NO EXECUTION");
-            else
-                fwDebug.write("\n\n-----------------------------------------------------------------\n" +
-                        "Total : " + timeTotal + " seconds for " + amount + " prompts = " + (timeTotal / amount) + " seconds/prompt");
-        } catch (IOException e) {
-            e.printStackTrace();
+            log("#### Answer");
+            log(chat.getResponseModel().getMessage().getResponse());
+            long duration = logEnd(startDate);
+            if (llmPromptPromptsTotal.get(virtualModelCard.getLlmModel()) == null) // first one not, as model must be loaded
+            {
+                llmPromptPromptsTotal.put(virtualModelCard.getLlmModel(), Long.valueOf(0));
+            } else {
+                llmPromptPromptsTotal.put(virtualModelCard.getLlmModel(), llmPromptPromptsTotal.computeIfAbsent(virtualModelCard.getLlmModel(), x -> 0L) + 1);
+                llmPromptDurationTotal.put(virtualModelCard.getLlmModel(), llmPromptDurationTotal.computeIfAbsent(virtualModelCard.getLlmModel(), x -> 0L) + duration);
+            }
+            history = new ArrayList<>(chat.getChatHistory());
+            log("------------------------------------------------------------------------------------------------------------------------");
+            log("");
         }
+        Long timeTotal = llmPromptDurationTotal.get(virtualModelCard.getLlmModel());
+        Long amount = llmPromptPromptsTotal.get(virtualModelCard.getLlmModel());
+        if (timeTotal == null || amount == null)
+            log("NO EXECUTION");
+        else
+            log("Total : " + timeTotal + " seconds for " + amount + " prompts = " + (timeTotal / amount) + " seconds/prompt");
     }
 }

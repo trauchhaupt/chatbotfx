@@ -1,14 +1,13 @@
 package de.vrauchhaupt.chatbotfx.manager;
 
 import de.vrauchhaupt.chatbotfx.ChatBot;
+import de.vrauchhaupt.chatbotfx.helper.StringHelper;
 import de.vrauchhaupt.chatbotfx.model.ChatViewModel;
 import de.vrauchhaupt.chatbotfx.model.IndexedOllamaChatMessage;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import io.github.ollama4j.Ollama;
-import io.github.ollama4j.models.chat.OllamaChatMessage;
-import io.github.ollama4j.models.chat.OllamaChatMessageRole;
-import io.github.ollama4j.models.chat.OllamaChatRequest;
-import io.github.ollama4j.models.chat.OllamaChatResult;
+import io.github.ollama4j.exceptions.OllamaException;
+import io.github.ollama4j.models.chat.*;
 import io.github.ollama4j.models.response.Model;
 import io.github.ollama4j.utils.Options;
 import io.github.ollama4j.utils.OptionsBuilder;
@@ -16,22 +15,18 @@ import jakarta.validation.constraints.NotNull;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class OllamaManager extends AbstractManager {
 
-    private static final long REQUEST_TIMEOUT_SECONDS = 360L;
+    private static final long REQUEST_TIMEOUT_SECONDS = 3600L;
     private static final boolean VERBOSE = false;
     private static OllamaManager INSTANCE;
     private final BooleanProperty working = new SimpleBooleanProperty(false);
@@ -59,7 +54,7 @@ public class OllamaManager extends AbstractManager {
         }).start();
     }
 
-    private Ollama newOllamaApi() {
+    public Ollama newOllamaApi() {
         Ollama ollamaAPI = new Ollama(SettingsManager.instance().getOllamaHost());
         ollamaAPI.setMetricsEnabled(false);
         ollamaAPI.setRequestTimeoutSeconds(REQUEST_TIMEOUT_SECONDS);
@@ -352,6 +347,48 @@ public class OllamaManager extends AbstractManager {
                 logLn("Could not interrupt loading asking", e);
             }
         }
+    }
+
+    public OllamaChatResult chat(OllamaChatRequest request, OllamaChatTokenHandler tokenHandler) throws OllamaException {
+        Path debugDirectory = Paths.get("debug");
+        long startDate = new Date().getTime();
+        long size = 0;
+        Path debugFile = null;
+        try {
+            if (!Files.exists(debugDirectory)) {
+                Files.createDirectory(debugDirectory);
+            }
+            debugFile = debugDirectory.resolve(request.getModel() + ".debug");
+            try (OutputStream outputStream = Files.newOutputStream(debugFile, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                 OutputStreamWriter writer = new OutputStreamWriter(outputStream)) {
+                writer.write("\n\n----------------------------------------------------------------------------------");
+                for (OllamaChatMessage message : request.getMessages()) {
+                    writer.write("\n<" + message.getRole().getRoleName().toUpperCase() + "> : ");
+                    writer.write(StringHelper.toBlock(message.getResponse()));
+                    size += message.getResponse().length();
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Could not write debug information");
+            e.printStackTrace();
+        }
+
+        Ollama ollamaAPI = newOllamaApi();
+        OllamaChatResult returnValue = ollamaAPI.chat(request, tokenHandler);
+
+        if (debugFile != null) {
+            try (OutputStream outputStream = Files.newOutputStream(debugFile, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                 OutputStreamWriter writer = new OutputStreamWriter(outputStream)) {
+                long endDate = new Date().getTime();
+                writer.write("\n###<" + returnValue.getResponseModel().getMessage().getRole().getRoleName().toUpperCase() + "> : ");
+                writer.write(StringHelper.toBlock(returnValue.getResponseModel().getMessage().getResponse()));
+                writer.write("\n\nSTATISTIC : " + ((endDate - startDate) / 1000) + " sec for " + size + " characters");
+            } catch (IOException e) {
+                System.err.println("Could not write debug information");
+                e.printStackTrace();
+            }
+        }
+        return returnValue;
     }
 
 

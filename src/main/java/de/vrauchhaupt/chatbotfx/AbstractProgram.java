@@ -1,12 +1,13 @@
 package de.vrauchhaupt.chatbotfx;
 
+import de.vrauchhaupt.chatbotfx.helper.StringHelper;
 import de.vrauchhaupt.chatbotfx.manager.IPrintFunction;
+import de.vrauchhaupt.chatbotfx.manager.OllamaManager;
 import de.vrauchhaupt.chatbotfx.manager.SettingsManager;
 import de.vrauchhaupt.chatbotfx.model.ChatMessageHelper;
 import de.vrauchhaupt.chatbotfx.model.DisplayRole;
 import de.vrauchhaupt.chatbotfx.model.LlmModelCardJson;
 import de.vrauchhaupt.chatbotfx.model.SceneJson;
-import io.github.ollama4j.Ollama;
 import io.github.ollama4j.models.chat.OllamaChatMessage;
 import io.github.ollama4j.models.chat.OllamaChatMessageRole;
 import io.github.ollama4j.models.chat.OllamaChatRequest;
@@ -25,6 +26,7 @@ import java.text.DateFormat;
 import java.util.*;
 
 public abstract class AbstractProgram implements IPrintFunction {
+    public static final long OLLAMA_TIMEOUT = 3600L;
     protected static final Options options = new OptionsBuilder()
             .setTemperature(1.3f)
             .setTopP(0.6f)
@@ -32,45 +34,18 @@ public abstract class AbstractProgram implements IPrintFunction {
             .setRepeatPenalty(1.3f)
             .setRepeatLastN(128)
             .build();
-
-    protected static final long OLLAMA_TIMEOUT = 3600L;
     protected static int imageIndex = 0;
-    protected static Ollama ollamaAPI = new Ollama(SettingsManager.instance().getOllamaHost());
     private static Class<? extends AbstractProgram> programClazz = null;
     private static PrintWriter logWriter = null;
     private static DateFormat dateFormat = DateFormat.getTimeInstance(DateFormat.MEDIUM);
     protected Map<Integer, Path> IMAGE_INDEX = new HashMap<>();
-
-    private static void stdoutBlock(String myString) {
-        char[] chars = myString.toCharArray();
-        ArrayList<String> list = new ArrayList<>();
-        StringBuilder builder = new StringBuilder();
-        int count = 0;
-        for (char character : chars) {
-            if (count < 120 - 1) {
-                builder.append(character);
-                count++;
-            } else {
-                if (character == ' ') {
-                    builder.append(character);
-                    System.out.println(builder);
-                    count = 0;
-                    builder.setLength(0);
-                } else {
-                    builder.append(character);
-                    count++;
-                }
-            }
-        }
-        System.out.println(builder);
-    }
 
 
     public static void log(String logLine) {
         logWriter.write(logLine);
         logWriter.write("\n");
         logWriter.flush();
-        stdoutBlock(logLine);
+        StringHelper.stdoutBlock(logLine);
     }
 
     public static Date logStart() {
@@ -102,17 +77,15 @@ public abstract class AbstractProgram implements IPrintFunction {
         OllamaChatRequest chatRequest = new OllamaChatRequest(curModel.getLlmModel(), false, newHistory)
                 .withOptions(options)
                 .withMessages(newHistory);
-        OllamaChatResult chat = ollamaAPI.chat(chatRequest, null);
+        OllamaChatResult chat = OllamaManager.instance().chat(chatRequest, null);
         String response = chat.getResponseModel().getMessage().getResponse();
         log(response);
         return response;
     }
 
-
     protected static void initAndRun(Class<? extends AbstractProgram> programClazz) {
-        SettingsManager.instance().loadFromConfigFile();
+        SettingsManager.instance().loadFromConfigFile(true);
         AbstractProgram.programClazz = programClazz;
-        ollamaAPI.setRequestTimeoutSeconds(OLLAMA_TIMEOUT);
         File loggingFile = new File(programClazz.getSimpleName() + ".log");
         try (FileOutputStream logOutputStream = new FileOutputStream(loggingFile);
              PrintWriter tmpPrintWriter = new PrintWriter(logOutputStream)) {

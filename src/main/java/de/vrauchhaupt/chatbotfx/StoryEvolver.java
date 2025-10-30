@@ -2,6 +2,7 @@ package de.vrauchhaupt.chatbotfx;
 
 import de.vrauchhaupt.chatbotfx.helper.JsonHelper;
 import de.vrauchhaupt.chatbotfx.manager.LlmModelCardManager;
+import de.vrauchhaupt.chatbotfx.manager.OllamaManager;
 import de.vrauchhaupt.chatbotfx.manager.SettingsManager;
 import de.vrauchhaupt.chatbotfx.manager.StableDiffusionManager;
 import de.vrauchhaupt.chatbotfx.model.ChatMessageHelper;
@@ -79,17 +80,16 @@ public class StoryEvolver extends AbstractProgram {
             OllamaChatMessage promptToWork = ChatMessageHelper.createReplacedChatMessage(scene.getMessages().get(iPrompt), curModel);
             log("#### Prompt " + iPrompt);
             Date startDate = logStart();
-            log(promptToWork.getRole() + " : " + promptToWork.getResponse());
+            log("<" + promptToWork.getRole().getRoleName().toUpperCase() + "> : " + promptToWork.getResponse());
             history.add(promptToWork);
 
             OllamaChatRequest chatRequest = new OllamaChatRequest(curModel.getLlmModel(), false, history)
                     .withUseTools(false)
                     .withOptions(options);
 
-
             OllamaChatResult chat = null;
             try {
-                chat = ollamaAPI.chat(chatRequest, null);
+                chat = OllamaManager.instance().chat(chatRequest, null);
             } catch (Exception e) {
                 log("Failed to chat with AI");
                 log(e);
