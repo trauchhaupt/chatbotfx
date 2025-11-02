@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 
 public class OllamaManager extends AbstractManager {
 
-    private static final long REQUEST_TIMEOUT_SECONDS = 3600L;
+    private static final long REQUEST_TIMEOUT_SECONDS = 360L;
     private static final boolean VERBOSE = false;
     private static OllamaManager INSTANCE;
     private final BooleanProperty working = new SimpleBooleanProperty(false);

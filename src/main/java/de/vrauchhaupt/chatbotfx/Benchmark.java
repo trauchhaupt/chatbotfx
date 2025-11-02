@@ -43,7 +43,11 @@ public class Benchmark extends AbstractProgram {
         log("###############################");
         log("##### SUMMARY Prompt LLM ######");
         log("###############################");
-        llmPromptDurationTotal.forEach((key, value) -> log(key + " -> " + value + " sec. total"));
+        llmPromptDurationTotal.entrySet()
+                .stream()
+                .sorted((a, b) -> a.getKey().compareToIgnoreCase(b.getKey()))
+                .forEach(x -> log(x.getKey() + "\t\t\t -> " + x.getValue() + "\t sec. total"));
+
     }
 
     private void runWithScene(SceneJson scene) throws IOException {
@@ -53,7 +57,7 @@ public class Benchmark extends AbstractProgram {
         List<String> modelsLoadable = Files.list(SettingsManager.instance().getPathToLlmModelFiles())
                 .filter(x -> x.getFileName().toString().endsWith(".gguf"))
                 .map(x -> FilenameUtils.getBaseName(x.getFileName().toString()))
-                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .sorted(String.CASE_INSENSITIVE_ORDER.reversed())
                 .toList();
 
         System.out.println(modelsLoadable.stream()
@@ -63,9 +67,9 @@ public class Benchmark extends AbstractProgram {
             virtualModelCard.setModelCardName("Sabine");
             virtualModelCard.setLlmModel(curModel);
             virtualModelCard.setSystem("");
-            virtualModelCard.setTemperature(1.5f);
-            virtualModelCard.setTop_k(20);
-            virtualModelCard.setTop_p(0.5f);
+            virtualModelCard.setTemperature(1.3f);
+            virtualModelCard.setTop_k(65);
+            virtualModelCard.setTop_p(0.7f);
 
             List<String> alreadyListedModels = OllamaManager.instance().listModels()
                     .stream()
@@ -82,6 +86,10 @@ public class Benchmark extends AbstractProgram {
                 OllamaManager.instance().loadModelSynchronous(virtualModelCard);
             }
             this.runWithSceneAndModel(scene, virtualModelCard);
+            llmPromptDurationTotal.entrySet()
+                    .stream()
+                    .sorted((a, b) -> a.getKey().compareToIgnoreCase(b.getKey()))
+                    .forEach(x -> log(x.getKey() + "\t\t\t -> " + x.getValue() + "\t sec. total"));
         }
     }
 

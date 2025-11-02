@@ -1,7 +1,12 @@
 [versions]
 guava = "33.2.1-jre"
 junit-jupiter = "5.10.3"
+sl4j = "2.0.17"
+lombok = "1.18.36"
 
 [libraries]
+slf4-api = { module = "org.slf4j:slf4j-api", version.ref = "sl4j" }
+slf4-simple = { module = "org.slf4j:slf4j-simple", version.ref = "sl4j" }
+lombok = { module = "org.projectlombok:lombok", version.ref= "lombok" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
