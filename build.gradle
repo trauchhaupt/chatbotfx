@@ -40,6 +40,8 @@ extraJavaModuleInfo{
         requires("org.slf4j")
         requires("simpleclient")
         requires("java.net.http")
+        requires("com.fasterxml.jackson.databind")
+        requires("com.fasterxml.jackson.datatype.jsr310")
     }
     module('simpleclient-0.16.0.jar', 'simpleclient', '0.16.0')
     module('simpleclient_tracer_otel-0.16.0.jar', 'simpleclient_tracer_otel', '0.16.0')

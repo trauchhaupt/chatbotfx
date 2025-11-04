@@ -28,6 +28,7 @@ public class StableDiffusionManager extends AbstractManager {
     public static final int UPSCALED_GENERATED_IMAGE_HEIGHT = 3 * GENERATED_IMAGE_WIDTH;
 
     private static StableDiffusionManager INSTANCE = null;
+    private boolean webUiWasRunningAtStart = true;
 
     public static StableDiffusionManager instance() {
         if (INSTANCE == null)
@@ -49,15 +50,20 @@ public class StableDiffusionManager extends AbstractManager {
             // Check HTTP response code
             int responseCode = connection.getResponseCode();
             // HTTP codes in 200-299 range indicate success
-            return responseCode >= 200 && responseCode < 300;
+            webUiWasRunningAtStart =  responseCode >= 200 && responseCode < 300;
+
         } catch (IOException e) {
             // Exception indicates URL did not resolve
             System.err.println("Failed to resolve webUi_forge URL: " + SettingsManager.instance().getWebuiForgeHost());
             e.printStackTrace();
-            return false;
+            webUiWasRunningAtStart = false;
         }
+        return webUiWasRunningAtStart;
     }
 
+    public boolean isWebUiWasRunningAtStart() {
+        return webUiWasRunningAtStart;
+    }
 
     public void renderWithPrompt(int index, LlmModelCardJson modelCardJson, String prompt, IPrintFunction imageConsumer) {
         if (modelCardJson.getTxt2ImgModel() == null || modelCardJson.getTxt2ImgModel().isEmpty())

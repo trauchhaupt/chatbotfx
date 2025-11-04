@@ -55,18 +55,15 @@ public class ChatbotLlmStreamHandler implements IMessaging, OllamaChatTokenHandl
     @Override
     public void accept(OllamaChatResponseModel responseModel) {
         String message = responseModel.getMessage().getResponse();
-        String trimmedMessage = message;
-        String matchedEnding = sentenceEndings.stream()
-                .filter(trimmedMessage::endsWith)
-                .findFirst()
-                .orElse(null);
-        if (matchedEnding != null &
-                !trimmedMessage.endsWith("...") &&
-                !"*".equals(trimmedMessage) &&
-                message.length() - lastSentences.length() > 1) {
-            String curSentence = message.substring(lastSentences.length());
-            appendAnswer(curSentence);
-            lastSentences = message;
+        String[] splittedMessages = message.split("\\n");
+        for (String splittedMessage : splittedMessages) {
+            if (splittedMessage.isEmpty() || splittedMessage.isBlank())
+                continue;
+            logLn("Original sentence '" + splittedMessage + "'");
+            splittedMessage = cleanWith(splittedMessage).trim();
+            TtsSentence ttsSentence = new TtsSentence(splittedMessage, chatMessageIndex);
+            PrintingManager.instance().addToPrintingQueue(ttsSentence);
+            PiperManager.instance().fileSentence(ttsSentence);
         }
     }
 }

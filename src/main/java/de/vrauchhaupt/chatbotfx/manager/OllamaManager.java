@@ -116,10 +116,10 @@ public class OllamaManager extends AbstractManager {
                 .map(IndexedOllamaChatMessage::getChatMessage)
                 .collect(Collectors.toList());
         collect.add(new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, "Create a LLM prompt about the story so far. It should be short and simple and describe one person out of this story."));
-        OllamaChatRequest chatRequest = new OllamaChatRequest(model.getLlmModel(), true, collect)
+        OllamaChatRequest chatRequest = new OllamaChatRequest(model.getLlmModel(), false, collect)
                 .withOptions(options);
         try {
-            OllamaChatResult chatResult = newOllamaApi().chat(chatRequest, null);
+            OllamaChatResult chatResult = chat(chatRequest, null);
             List<OllamaChatMessage> chatHistory = chatResult.getChatHistory();
             OllamaChatMessage pictureGenerationPrompt = chatHistory.getLast();
             logLn("Painting the picture with the following command:\n" + pictureGenerationPrompt.getResponse());
@@ -144,7 +144,7 @@ public class OllamaManager extends AbstractManager {
                 .map(IndexedOllamaChatMessage::getChatMessage)
                 .collect(Collectors.toList());
         collect.add(new OllamaChatMessage(OllamaChatMessageRole.SYSTEM, "Summarize the history up to now in about 200 words."));
-        OllamaChatRequest chatRequest = new OllamaChatRequest(model.getLlmModel(), true, collect)
+        OllamaChatRequest chatRequest = new OllamaChatRequest(model.getLlmModel(), false, collect)
                 .withOptions(options);
         try {
             OllamaChatResult chatResult = newOllamaApi().chat(chatRequest, null);
@@ -209,10 +209,11 @@ public class OllamaManager extends AbstractManager {
         streamHandler.setChatMessageIndex(newChatMessageId);
         currentAskingThread = ThreadManager.instance().startThread("Asking Ollama Thread", () -> {
                     try {
-                        OllamaChatResult chatResult = newOllamaApi().chat(ollamaChatRequestModel, streamHandler);
+                        OllamaChatResult chatResult = chat(ollamaChatRequestModel, null);
                         if (chatResult.getResponseModel().getError() != null) {
                             throw new RuntimeException("Error code " + chatResult.getResponseModel().getError() + " was given!");
                         }
+                        streamHandler.accept(chatResult.getResponseModel());
                         streamHandler.inputHasStopped();
                         List<IndexedOllamaChatMessage> fullHistory = ChatViewModel.instance().getFullHistory();
                         int messagesToStripForLLM = SettingsManager.instance().getMessagesToStripForLLM();
@@ -221,7 +222,9 @@ public class OllamaManager extends AbstractManager {
                                     () -> compressMessage(fullHistory.subList(0, messagesToStripForLLM), model),
                                     null);
                         }
-                        if (fullHistory.size() > 4 && (fullHistory.size() % 5 == 0 || (fullHistory.size() & 6) == 0)) {
+                        if (StableDiffusionManager.instance().isWebUiWasRunningAtStart() &&
+                                fullHistory.size() > 4 &&
+                                (fullHistory.size() % 5 == 0 || (fullHistory.size() & 6) == 0)) {
                             ThreadManager.instance().startThread("Paint a Picture",
                                     () -> paintPicture(fullHistory.subList(fullHistory.size() - 4, fullHistory.size()), model),
                                     null);
@@ -354,6 +357,8 @@ public class OllamaManager extends AbstractManager {
         long startDate = new Date().getTime();
         long size = 0;
         Path debugFile = null;
+        request.setUseTools(false);
+        request.setTools(new ArrayList<>());
         try {
             if (!Files.exists(debugDirectory)) {
                 Files.createDirectory(debugDirectory);
