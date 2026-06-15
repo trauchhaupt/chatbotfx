@@ -63,6 +63,7 @@ public class ChatBot extends Application {
                 Platform.exit();
                 System.exit(0);
             });
+            scene.getRoot().setStyle("-fx-font-size: 14px;");
             primaryStage.show();
             SettingsManager.instance().assertAllSettingsValid();
 

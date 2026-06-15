@@ -29,6 +29,7 @@ public class PiperManager extends AbstractManager {
     private final Queue<TtsSentence> queueOfTextsToPlay = new LinkedList<>();
     private final ObservableList<String> ttsModels = FXCollections.observableArrayList();
     private final List<Thread> currentThreads = new LinkedList<>();
+    private boolean stopPlaying = false;
 
     public PiperManager() {
         ThreadManager.instance().startEndlessThread("TTS Generation", this::generateTTS);
@@ -83,7 +84,7 @@ public class PiperManager extends AbstractManager {
     }
 
     private void playSounds(ControlledThread thread) {
-        while (!queueOfTextsToPlay.isEmpty()) {
+        while (!queueOfTextsToPlay.isEmpty() && !stopPlaying) {
             isPlayingSound.set(true);
             TtsSentence sentenceToPlay = queueOfTextsToPlay.poll();
             if (sentenceToPlay == null)
@@ -99,6 +100,8 @@ public class PiperManager extends AbstractManager {
 
                 while ((numBytesRead = rawSoundIs.read(buffer)) != -1) {
                     line.write(buffer, 0, numBytesRead);
+                    if ( stopPlaying)
+                        break;
                 }
                 line.drain();
                 line.close();
@@ -109,6 +112,7 @@ public class PiperManager extends AbstractManager {
                 isPlayingSound.set(false);
             }
         }
+        stopPlaying = false;
     }
 
     public boolean checkPiperIsAvailable() {
@@ -132,6 +136,7 @@ public class PiperManager extends AbstractManager {
     public void cancelWork() {
         queueOfTextsToProduce.clear();
         queueOfTextsToPlay.clear();
+        stopPlaying = true;
     }
 
     private void generateTTS(ControlledThread thread) {
@@ -210,6 +215,7 @@ public class PiperManager extends AbstractManager {
             ttsSentence.informSpoken();
             return;
         }
+        stopPlaying = false;
         queueOfTextsToProduce.add(ttsSentence);
         logLn("Adding to TTSQ '" + ttsSentence.getText() + "'");
     }

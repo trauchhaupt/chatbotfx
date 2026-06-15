@@ -124,8 +124,6 @@ public class SettingsWindow {
             return false;
         if (warningUrlToOllamaHost.getText() != null && !warningUrlToOllamaHost.getText().isEmpty())
             return false;
-        if (warningUrlToWebuiForgeHost.getText() != null && !warningUrlToWebuiForgeHost.getText().isEmpty())
-            return false;
 
         return true;
     }
