@@ -1,6 +1,7 @@
 package de.vrauchhaupt.chatbotfx.view;
 
 import de.vrauchhaupt.chatbotfx.ChatBot;
+import de.vrauchhaupt.chatbotfx.helper.FxHelper;
 import de.vrauchhaupt.chatbotfx.manager.*;
 import de.vrauchhaupt.chatbotfx.model.*;
 import javafx.animation.Transition;
@@ -32,7 +33,6 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
 
     private static final float WAITING_CIRCLE_SIZE = 7;
 
-
     @FXML
     private MenuItem menuItemBaseSettings;
     @FXML
@@ -59,6 +59,8 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
 
     @FXML
     private ScrollPane scrollPaneChat;
+    @FXML
+    private VBox scrollPaneChatContent;
     @FXML
     private ScrollPane scrollPaneImages;
     @FXML
@@ -126,9 +128,21 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         PrintingManager.instance().setPrintFunction(this);
 
         Platform.runLater(() -> textFieldUserInput.requestFocus());
+        containerChat.setScrollPaneParent( scrollPaneChat);
         containerChat.heightProperty().addListener((observable, oldValue, newValue) -> {
             if (chechMenuItemAutoScroll.isSelected())
                 scrollPaneChat.setVvalue(1.0); // Scroll to the bottom
+        });
+        scrollPaneChat.widthProperty().addListener((oldV, newV, value) ->
+        {
+            if (newV == null || newV.intValue() < 60)
+                return;
+
+            double newWidth = newV.doubleValue() - 15;
+            FxHelper.setAllWidths(scrollPaneChatContent, newWidth);
+            FxHelper.setAllWidths(containerChat, newWidth);
+
+            FxHelper.setAllWidths(paneLoadBlocker, newWidth);
         });
 
         scrollPaneImages.setPrefWidth(StableDiffusionManager.GENERATED_IMAGE_WIDTH + 30);
@@ -143,6 +157,8 @@ public class ChatMainWindow implements IPrintFunction, IChatBoxViewComponent {
         menuItemTxt2Img.selectedProperty().bindBidirectional(SettingsManager.instance().text2ImageGenerationProperty());
 
         ThreadManager.instance().startEndlessThread("Block/Unblock UI", this::controllWorkingInProgress);
+
+
     }
 
 

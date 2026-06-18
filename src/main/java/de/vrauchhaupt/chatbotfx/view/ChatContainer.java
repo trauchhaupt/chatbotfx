@@ -1,18 +1,37 @@
 package de.vrauchhaupt.chatbotfx.view;
 
+import de.vrauchhaupt.chatbotfx.helper.FxHelper;
 import de.vrauchhaupt.chatbotfx.manager.IPrintFunction;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.VBox;
 
 public class ChatContainer extends VBox implements IChatBoxViewComponent {
     private CopyableTextFlow currentLineInChat = null;
+    private ScrollPane scrollPaneChat = null;
 
     public ChatContainer() {
         super();
-        setFillWidth(true);
-        setSpacing(3);
-        setPadding(new Insets(15, 5, 5, 5));
+        setPadding(new Insets(15, 10, 10, 10));
+        this.widthProperty().addListener((obs, oldV, newV) -> widthHasChanged());
+    }
+
+    private void widthHasChanged() {
+        getChildren().stream()
+                .filter(x -> x instanceof CopyableTextFlow)
+                .map(x -> (CopyableTextFlow) x)
+                .forEach(this::setCurrentLineInChatWidth);
+        layoutChildren();
+        requestLayout();
+    }
+
+    private void setCurrentLineInChatWidth(CopyableTextFlow copyableTextFlow) {
+        if (getWidth() <= 0.0)
+            return;
+        double lineWidth = scrollPaneChat.getWidth() - 35.0;
+        FxHelper.setAllWidths(copyableTextFlow, lineWidth);
+        copyableTextFlow.requestLayout();
     }
 
     public void clearChat() {
@@ -32,10 +51,9 @@ public class ChatContainer extends VBox implements IChatBoxViewComponent {
                 throw new RuntimeException("The previous message index " + previousMessageIndex + " is bigger than the actual one");
         }
         currentLineInChat = new CopyableTextFlow(printFunction, chatMessageIndex);
-        currentLineInChat.setPrefWidth(this.getWidth() - 10.0);
-        currentLineInChat.setMinWidth(this.getWidth() - 10.0);
+
         getChildren().add(currentLineInChat);
-        currentLineInChat.requestLayout();
+        setCurrentLineInChatWidth(currentLineInChat);
         return currentLineInChat;
     }
 
@@ -51,5 +69,9 @@ public class ChatContainer extends VBox implements IChatBoxViewComponent {
         if (currentLineInChat == null)
             return;
         currentLineInChat.appendToLastText(space);
+    }
+
+    public void setScrollPaneParent(ScrollPane scrollPaneChat) {
+        this.scrollPaneChat = scrollPaneChat;
     }
 }

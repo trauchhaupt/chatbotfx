@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import de.vrauchhaupt.chatbotfx.view.ChatContainer?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.Group?>
 <?import javafx.scene.layout.*?>
-<?import de.vrauchhaupt.chatbotfx.view.ChatContainer?>
 <BorderPane xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="de.vrauchhaupt.chatbotfx.view.ChatMainWindow"
@@ -15,11 +15,11 @@
                 <Menu fx:id="menuSettings" text="Settings">
                     <MenuItem fx:id="menuItemBaseSettings" text="Base Settings"/>
                     <MenuItem fx:id="menuItemReloadModels" text="Reload Models"/>
-                    <CheckMenuItem fx:id="chechMenuItemAutoScroll" text="Autoscroll" selected="true" />
+                    <CheckMenuItem fx:id="chechMenuItemAutoScroll" text="Autoscroll" selected="true"/>
                 </Menu>
                 <Menu text="AI Features">
-                    <CheckMenuItem fx:id="menuItemTts" text="Text to Speech (TTS)" />
-                    <CheckMenuItem fx:id="menuItemTxt2Img" text="Auto Text to Image (T2I)" />
+                    <CheckMenuItem fx:id="menuItemTts" text="Text to Speech (TTS)"/>
+                    <CheckMenuItem fx:id="menuItemTxt2Img" text="Auto Text to Image (T2I)"/>
                 </Menu>
             </MenuBar>
             <HBox alignment="BASELINE_LEFT" spacing="5" maxWidth="Infinity">
@@ -31,14 +31,14 @@
                 <Button fx:id="buttonClear" text="Clear"/>
                 <Button fx:id="buttonSave" text="Save"/>
                 <Button fx:id="buttonLoad" text="Load"/>
-                <Label fx:id="messageCounter" />
+                <Label fx:id="messageCounter"/>
             </HBox>
         </VBox>
     </top>
     <center>
-        <ScrollPane fx:id="scrollPaneChat" fitToWidth="true" vbarPolicy="ALWAYS">
-            <VBox>
-                <ChatContainer fx:id="containerChat" />
+        <ScrollPane fx:id="scrollPaneChat" fitToWidth="true" vbarPolicy="ALWAYS" hbarPolicy="NEVER">
+            <VBox fx:id="scrollPaneChatContent" fillWidth="true">
+                <ChatContainer fx:id="containerChat" fillWidth="true" spacing="3"/>
                 <StackPane fx:id="paneLoadBlocker" mouseTransparent="true" disable="true" visible="false">
                     <Group fx:id="groupLoadingAnimation" mouseTransparent="true" disable="true"/>
                 </StackPane>
